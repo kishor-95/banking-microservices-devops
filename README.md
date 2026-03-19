@@ -96,13 +96,6 @@ Then open http://localhost:3000
 
 4. Open http://localhost:3000
 
-## Demo Credentials
-
-```
-Username: demo
-Password: password123
-```
-
 ## API Documentation
 
 Each FastAPI service auto-generates interactive API docs:
