@@ -167,11 +167,11 @@ export default function AccountDetailsModal({ account, balance, history = [], on
             {account.is_active && (
               <div style={m.dangerZone}>
                 <div style={m.dangerHeader}>
-                  <span style={m.dangerTitle}>⚠ Danger Zone</span>
+                  <span style={m.dangerTitle}>☠️ Danger Zone</span>
                 </div>
                 <div style={m.dangerBody}>
                   <div>
-                    <p style={m.dangerLabel}>Close Account</p>
+                    <p style={m.dangerLabel}>Close Account🥺</p>
                     <p style={m.dangerHint}>
                       {hasBalance
                         ? `Withdraw ${money(balance)} before closing.`

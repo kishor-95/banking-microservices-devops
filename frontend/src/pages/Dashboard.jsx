@@ -4,9 +4,6 @@
  *   - Balance cards for all accounts
  *   - Deposit / Withdraw form
  *   - Paginated transaction history
- *
- * FIXED: All catch blocks now use parseApiError() — prevents React Error #31
- * when FastAPI returns detail as an array (422 validation responses).
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -132,7 +129,7 @@ export default function Dashboard() {
         </div>
         <div style={s.headerRight}>
           <button onClick={() => setProfileOpen(true)} style={s.profileBtn}>
-            👋 {user?.username}
+             😎{user?.username}
           </button>
           <button onClick={handleLogout} style={s.logoutBtn}>Sign Out</button>
         </div>
