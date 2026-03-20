@@ -1,20 +1,47 @@
 # ── balance-service Dockerfile ──────────────────────────────────
-FROM python:3.12-slim
+# ── Stage 1: build dependencies ───────────────────────────────
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev gcc \
+    gcc libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Build wheels (faster installs later)
+RUN pip install --upgrade pip \
+    && pip wheel --no-cache-dir --no-deps -r requirements.txt -w /wheels
 
-RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
+
+# ── Stage 2: runtime (clean image) ────────────────────────────
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Only runtime deps (no gcc here)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install dependencies from wheels
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache-dir /wheels/*
+
+# Create user BEFORE copy (avoids chown)
+RUN adduser --disabled-password --gecos "" appuser
+
+# Copy app with correct ownership
+COPY --chown=appuser:appuser . .
+
 USER appuser
 
-EXPOSE 8003
+EXPOSE 8002
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8003"]
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=5s \
+  CMD curl -f http://localhost:8003/health || exit 1
+
+# Production-ready uvicorn
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8003", "--workers", "2"]

@@ -1,23 +1,47 @@
-# ── auth-service Dockerfile ─────────────────────────────────────
+# # ── auth-service Dockerfile ─────────────────────────────────────
+# ── Stage 1: build dependencies ───────────────────────────────
+FROM python:3.12-slim AS builder
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+
+# Build wheels (faster installs later)
+RUN pip install --upgrade pip \
+    && pip wheel --no-cache-dir --no-deps -r requirements.txt -w /wheels
+
+
+# ── Stage 2: runtime (clean image) ────────────────────────────
 FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install OS-level deps needed for psycopg2-binary
+# Only runtime deps (no gcc here)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev gcc \
+    libpq5 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install dependencies from wheels
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache-dir /wheels/*
 
-COPY . .
+# Create user BEFORE copy (avoids chown)
+RUN adduser --disabled-password --gecos "" appuser
 
-# Non-root user (security best practice)
-RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
+# Copy app with correct ownership
+COPY --chown=appuser:appuser . .
+
 USER appuser
 
-EXPOSE 8001
+EXPOSE 8002
 
-# Stateless — multiple replicas are safe
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=5s \
+  CMD curl -f http://localhost:8001/health || exit 1
+
+# Production-ready uvicorn
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "2"]

@@ -1,7 +1,9 @@
-node_modules
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
 .git
 .gitignore
 Dockerfile
 docker-compose.yml
-.env
-dist
