@@ -1,0 +1,122 @@
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: bankapp
+  labels:
+    app: frontend
+    app.kubernetes.io/part-of: bankapp
+data:
+  nginx.conf: |
+    worker_processes auto;
+
+    events {
+        worker_connections 1024;
+    }
+
+    http {
+        include      /etc/nginx/mime.types;
+        default_type application/octet-stream;
+
+        log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent"';
+        access_log /var/log/nginx/access.log main;
+        error_log  /var/log/nginx/error.log warn;
+
+        sendfile          on;
+        tcp_nopush        on;
+        keepalive_timeout 65;
+
+        gzip          on;
+        gzip_vary     on;
+        gzip_types    text/plain text/css application/json application/javascript
+                      text/xml application/xml application/xml+rss text/javascript;
+        gzip_min_length 1000;
+
+        # Service names must match Kubernetes Service names in this namespace
+        upstream auth_service        { server auth-service:8001; }
+        upstream account_service     { server account-service:8002; }
+        upstream balance_service     { server balance-service:8003; }
+        upstream transaction_service { server transaction-service:8004; }
+
+        server {
+            listen      80;
+            server_name _;
+            root        /usr/share/nginx/html;
+            index       index.html;
+
+            add_header X-Frame-Options        DENY             always;
+            add_header X-Content-Type-Options nosniff          always;
+            add_header X-XSS-Protection       "1; mode=block" always;
+            add_header Referrer-Policy        "no-referrer-when-downgrade" always;
+
+            location /assets/ {
+                expires    1y;
+                add_header Cache-Control "public, immutable";
+            }
+
+            location /api/auth/ {
+                proxy_pass         http://auth_service/auth/;
+                proxy_set_header   Host              $host;
+                proxy_set_header   X-Real-IP         $remote_addr;
+                proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+                proxy_set_header   X-Forwarded-Proto $scheme;
+                proxy_read_timeout 30s;
+            }
+
+            location /api/accounts/ {
+                proxy_pass         http://account_service/accounts/;
+                proxy_set_header   Host              $host;
+                proxy_set_header   X-Real-IP         $remote_addr;
+                proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+                proxy_set_header   X-Forwarded-Proto $scheme;
+                proxy_read_timeout 30s;
+            }
+
+            location = /api/accounts {
+                proxy_pass         http://account_service/accounts;
+                proxy_set_header   Host              $host;
+                proxy_set_header   X-Real-IP         $remote_addr;
+                proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+                proxy_set_header   X-Forwarded-Proto $scheme;
+            }
+
+            location /api/balance/ {
+                proxy_pass         http://balance_service/balance/;
+                proxy_set_header   Host              $host;
+                proxy_set_header   X-Real-IP         $remote_addr;
+                proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+                proxy_set_header   X-Forwarded-Proto $scheme;
+                proxy_read_timeout 30s;
+            }
+
+            location = /api/balance {
+                proxy_pass         http://balance_service/balance;
+                proxy_set_header   Host              $host;
+                proxy_set_header   X-Real-IP         $remote_addr;
+                proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+                proxy_set_header   X-Forwarded-Proto $scheme;
+            }
+
+            location /api/transactions/ {
+                proxy_pass         http://transaction_service/transactions/;
+                proxy_set_header   Host              $host;
+                proxy_set_header   X-Real-IP         $remote_addr;
+                proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+                proxy_set_header   X-Forwarded-Proto $scheme;
+                proxy_read_timeout 60s;
+            }
+
+            location /health {
+                access_log off;
+                return 200 '{"status":"ok","service":"frontend"}';
+                add_header Content-Type application/json;
+            }
+
+            location / {
+                try_files $uri $uri/ /index.html;
+            }
+        }
+    }

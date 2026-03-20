@@ -1,0 +1,17 @@
+# ── auth-service/service.yaml ────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: bankapp
+  labels:
+    app.kubernetes.io/part-of: bankapp
+spec:
+  selector:
+    app: auth-service
+  ports:
+  - name: auth-service-port
+    protocol: TCP
+    ports: 8001
+    targetPort: 8001
+  type: ClusterIP

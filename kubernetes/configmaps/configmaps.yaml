@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bankapp-configmap
+  namespace: 
+  labels:
+    app.kubernetes.io/part-of: bankapp
+data:
+  PORT: "5432"
+  DB_HOST: "<rds-endpoint>"
+  JWT_EXPIRE_HOURS: "24"

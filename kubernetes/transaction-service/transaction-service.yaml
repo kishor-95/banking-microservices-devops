@@ -1,0 +1,17 @@
+# ── auth-service/service.yaml ────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: transaction-service
+  namespace: bankapp
+  labels:
+    app.kubernetes.io/part-of: bankapp
+spec:
+  selector:
+    app: transaction-service
+  ports:
+  - name: transaction-service-port
+    protocol: TCP
+    ports: 8004
+    targetPort: 8004
+  type: ClusterIP
