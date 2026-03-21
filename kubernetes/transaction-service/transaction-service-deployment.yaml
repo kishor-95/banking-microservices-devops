@@ -32,7 +32,7 @@ spec:
           image: kishor95/bankapp-transaction-service:latest         # ← fill in your image: e.g. your-registry/auth-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8004
+          - containerPort: 8004
 
           # ── Non-sensitive config from ConfigMap ───────────────────────────
           env:
@@ -40,44 +40,44 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   name: bankapp-config
-                  key:  DB_HOST
+                  key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
                   name: bankapp-config
-                  key:  DB_PORT
+                  key: DB_PORT
             - name: JWT_EXPIRE_HOURS
               valueFrom:
                 configMapKeyRef:
                   name: bankapp-config
-                  key:  JWT_EXPIRE_HOURS
+                  key: JWT_EXPIRE_HOURS
 
             # ── Sensitive values from Secret ──────────────────────────────
             - name: DB_NAME
               valueFrom:
                 secretKeyRef:
                   name: bankapp-backend-secret
-                  key:  DB_NAME
+                  key: DB_NAME
             - name: DB_USER
               valueFrom:
                 secretKeyRef:
                   name: bankapp-backend-secret
-                  key:  DB_USER
+                  key: DB_USER
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: bankapp-backend-secret
-                  key:  DB_PASSWORD
+                  key: DB_PASSWORD
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: bankapp-backend-secret
-                  key:  JWT_SECRET
+                  key: JWT_SECRET
 
           # ── Liveness probe — restart container if app is frozen ───────────
           livenessProbe:
             httpGet:
-              path: /auth/health
+              path: /transactions/health
               port: 8004
             initialDelaySeconds: 20
             periodSeconds: 15
@@ -87,7 +87,7 @@ spec:
           # ── Readiness probe — only send traffic when truly ready ──────────
           readinessProbe:
             httpGet:
-              path: /auth/health
+              path: /transactions/health
               port: 8004
             initialDelaySeconds: 10
             periodSeconds: 5

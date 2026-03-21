@@ -6,7 +6,7 @@ metadata:
   name: balance-service
   namespace: bankapp
   labels:
-    app: balance-servic
+    app: balance-service
     app.kubernetes.io/part-of: bankapp
 spec:
   replicas: 2
@@ -18,21 +18,21 @@ spec:
       maxUnavailable: 0    # never take a pod down before a new one is ready
   selector:
     matchLabels:
-      app: balance-servic
+      app: balance-service
   template:
     metadata:
       labels:
-        app: balance-servic
+        app: balance-service
     spec:
       # Graceful shutdown — let in-flight requests complete
       terminationGracePeriodSeconds: 30
 
       containers:
-        - name: balance-servic
-          image: kishor95/bankapp-balance-servic:latest         # ← fill in your image: e.g. your-registry/auth-service:1.0.0
+        - name: balance-service
+          image: kishor95/bankapp-balance-service:latest         # ← fill in your image: e.g. your-registry/auth-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8003
+          - containerPort: 8003
 
           # ── Non-sensitive config from ConfigMap ───────────────────────────
           env:
@@ -40,44 +40,44 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   name: bankapp-config
-                  key:  DB_HOST
+                  key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
                   name: bankapp-config
-                  key:  DB_PORT
+                  key: DB_PORT
             - name: JWT_EXPIRE_HOURS
               valueFrom:
                 configMapKeyRef:
                   name: bankapp-config
-                  key:  JWT_EXPIRE_HOURS
+                  key: JWT_EXPIRE_HOURS
 
             # ── Sensitive values from Secret ──────────────────────────────
             - name: DB_NAME
               valueFrom:
                 secretKeyRef:
                   name: bankapp-backend-secret
-                  key:  DB_NAME
+                  key: DB_NAME
             - name: DB_USER
               valueFrom:
                 secretKeyRef:
                   name: bankapp-backend-secret
-                  key:  DB_USER
+                  key: DB_USER
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: bankapp-backend-secret
-                  key:  DB_PASSWORD
+                  key: DB_PASSWORD
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: bankapp-backend-secret
-                  key:  JWT_SECRET
+                  key: JWT_SECRET
 
           # ── Liveness probe — restart container if app is frozen ───────────
           livenessProbe:
             httpGet:
-              path: /auth/health
+              path: /balance/health
               port: 8003
             initialDelaySeconds: 20
             periodSeconds: 15
@@ -87,7 +87,7 @@ spec:
           # ── Readiness probe ──────────
           readinessProbe:
             httpGet:
-              path: /auth/health
+              path: /balance/health
               port: 8003
             initialDelaySeconds: 10
             periodSeconds: 5

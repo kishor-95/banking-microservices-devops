@@ -36,10 +36,10 @@ data:
         gzip_min_length 1000;
 
         # Service names must match Kubernetes Service names in this namespace
-        upstream auth_service        { server auth-service:8001; }
-        upstream account_service     { server account-service:8002; }
-        upstream balance_service     { server balance-service:8003; }
-        upstream transaction_service { server transaction-service:8004; }
+        upstream auth_service        { server bankapp-auth-service:8001; }
+        upstream account_service     { server bankapp-account-service:8002; }
+        upstream balance_service     { server bankapp-balance-service:8003; }
+        upstream transaction_service { server bankapp-transaction-service:8004; }
 
         server {
             listen      80;

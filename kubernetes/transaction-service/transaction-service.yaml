@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: transaction-service
+  name: bankapp-transaction-service
   namespace: bankapp
   labels:
     app.kubernetes.io/part-of: bankapp
@@ -12,6 +12,6 @@ spec:
   ports:
   - name: transaction-service-port
     protocol: TCP
-    ports: 8004
+    port: 8004
     targetPort: 8004
   type: ClusterIP

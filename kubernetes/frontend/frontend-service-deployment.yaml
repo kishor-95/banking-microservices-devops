@@ -7,10 +7,6 @@ metadata:
   name: bankapp-frontend-deployment
   namespace: bankapp
 spec:
-  volumes:
-  - name: nginx-config
-    configMap:
-      name: nginx-config
   replicas: 2
   strategy:
     type: RollingUpdate
@@ -25,6 +21,10 @@ spec:
       labels:
         app: bankapp-frontend
     spec:
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: nginx-config
       containers:
       - image: kishor95/bankapp-frontend:latest
         imagePullPolicy: IfNotPresent
@@ -38,11 +38,11 @@ spec:
           subPath: nginx.conf
         resources:
           limits:
-            cpu: "50m"
-            memory: "64Mi"
-          requests:
             cpu: "100m"
             memory: "128Mi"
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
         livenessProbe:
           httpGet:
             path: /health
