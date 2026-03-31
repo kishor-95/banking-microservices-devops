@@ -54,12 +54,12 @@ output "aws_load_balancer_controller_role_arn" {
 # Bastion Outputs
 output "bastion_public_ip" {
   description = "Bastion host public IP"
-  value       = module.bastion.public_ip
+  value       = module.bastion_host.public_ip
 }
 
 output "bastion_instance_id" {
   description = "Bastion instance ID"
-  value       = module.bastion.instance_id
+  value       = module.bastion_host.instance_id
 }
 
 # RDS Outputs
