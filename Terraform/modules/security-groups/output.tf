@@ -1,6 +1,6 @@
 output "bastion_security_group_id" {
   description = "Bastion security group ID"
-  value       = aws_security_group.bastion_host.id
+  value       = aws_security_group.bastion.id
 }
 
 output "eks_additional_security_group_id" {

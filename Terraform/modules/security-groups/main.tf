@@ -98,7 +98,7 @@ resource "aws_security_group_rule" "rds_from_bastion" {
   from_port                = 5432
   to_port                  = 5432
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.bastion_host.id
+  source_security_group_id = aws_security_group.bastion.id
   security_group_id        = aws_security_group.rds.id
   description              = "PostgreSQL access from bastion for admin"
 }
