@@ -145,10 +145,3 @@ variable "db_skip_final_snapshot" {
   type        = bool
   default     = false
 }
-
-variable "db_password" {
-  description = "This the random password for db"
-  sensitive = true
-  type = string
-  default = ""
-}

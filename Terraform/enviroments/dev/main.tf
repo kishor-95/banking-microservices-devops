@@ -96,7 +96,6 @@ module "rds" {
   max_allocated_storage   = var.db_max_allocated_storage
   db_name                 = var.db_name
   db_username             = var.db_username
-  db_password             = var.db_password
   db_subnet_group_name    = module.vpc.database_subnet_group_name
   security_group_ids      = [module.security_groups.rds_security_group_id]
   backup_retention_period = var.db_backup_retention_period

@@ -74,12 +74,6 @@ output "rds_database_name" {
   value       = module.rds.db_instance_name
 }
 
-# output "rds_master_user_secret_arn" {
-#   description = "ARN of RDS master user secret in Secrets Manager"
-#   value       = module.rds.db_master_user_secret_arn
-#   sensitive   = true
-# }
-
 # Connection Information
 output "connection_instructions" {
   description = "Instructions for connecting to the infrastructure"
@@ -102,7 +96,6 @@ output "connection_instructions" {
     4. RDS Connection:
        - Endpoint: ${module.rds.db_instance_endpoint}
        - Database: ${module.rds.db_instance_name}
-       - Password: ${module.rds.db_password}
        
     ====================================================================
   EOT
