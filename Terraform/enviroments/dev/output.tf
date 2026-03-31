@@ -74,11 +74,11 @@ output "rds_database_name" {
   value       = module.rds.db_instance_name
 }
 
-output "rds_master_user_secret_arn" {
-  description = "ARN of RDS master user secret in Secrets Manager"
-  value       = module.rds.db_master_user_secret_arn
-  sensitive   = true
-}
+# output "rds_master_user_secret_arn" {
+#   description = "ARN of RDS master user secret in Secrets Manager"
+#   value       = module.rds.db_master_user_secret_arn
+#   sensitive   = true
+# }
 
 # Connection Information
 output "connection_instructions" {
@@ -90,7 +90,7 @@ output "connection_instructions" {
     ====================================================================
     
     1. SSH to Bastion:
-       ssh -i /path/to/${var.ec2_key_name}.pem ec2-user@${module.bastion.public_ip}
+       ssh -i /path/to/${var.ec2_key_name}.pem ec2-user@${module.bastion_host.public_ip}
     
     2. Configure kubectl (from bastion):
        aws eks update-kubeconfig --region ${var.aws_region} --name ${var.cluster_name}
@@ -102,11 +102,8 @@ output "connection_instructions" {
     4. RDS Connection:
        - Endpoint: ${module.rds.db_instance_endpoint}
        - Database: ${module.rds.db_instance_name}
-       - Retrieve password from Secrets Manager: ${module.rds.db_master_user_secret_arn}
-    
-    5. Retrieve RDS password:
-       aws secretsmanager get-secret-value --secret-id ${module.rds.db_master_user_secret_arn} --query SecretString --output text
-    
+       - Password: ${module.rds.db_password}
+       
     ====================================================================
   EOT
 }

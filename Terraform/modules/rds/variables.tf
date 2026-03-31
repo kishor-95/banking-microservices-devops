@@ -83,3 +83,11 @@ variable "common_tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "db_password" {
+  description = "This the random password for db"
+  sensitive = true
+  type = string
+  default = ""
+  
+}

@@ -2,7 +2,7 @@
 
 module "rds" {
   source  = "terraform-aws-modules/rds/aws"
-  version = "~> 5.0"
+  version = "~> 6.0"
 
   identifier = var.db_identifier
 
@@ -23,10 +23,11 @@ module "rds" {
   # Database configuration
   db_name  = var.db_name
   username = var.db_username
+  password = var.db_password
   port     = 5432
 
   # Password management - use random password, stored in Secrets Manager
-  manage_master_user_password = true
+  # manage_master_user_password = true
 
   # High availability
   multi_az               = true
@@ -44,7 +45,7 @@ module "rds" {
   # Deletion protection for production
   deletion_protection = var.deletion_protection
   skip_final_snapshot = var.skip_final_snapshot
-  final_snapshot_identifier = var.skip_final_snapshot ? null : "${var.db_identifier}-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
+  # final_snapshot_identifier = var.skip_final_snapshot ? null : "${var.db_identifier}-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
 
   # Enhanced monitoring
   enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
