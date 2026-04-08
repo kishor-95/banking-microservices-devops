@@ -47,6 +47,7 @@ module "eks" {
 
       instance_types = var.node_instance_types
       capacity_type  = "ON_DEMAND"  # For banking, avoid SPOT instances
+      vpc_security_group_ids = [module.security-groups.aws_security_group.eks_additional.id]
 
       min_size     = var.node_min_size
       max_size     = var.node_max_size
@@ -108,10 +109,10 @@ module "eks" {
       most_recent              = true
       service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
     }
-    # aws-ebs-csi-driver = {
-    #   most_recent              = true
-    #   service_account_role_arn = module.ebs_csi_irsa.iam_role_arn
-    # }
+    aws-ebs-csi-driver = {
+      most_recent              = true
+      service_account_role_arn = module.ebs_csi_irsa.iam_role_arn
+    }
   }
 
   tags = merge(
@@ -155,25 +156,6 @@ module "ebs_csi_irsa" {
     main = {
       provider_arn               = module.eks.oidc_provider_arn
       namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
-    }
-  }
-
-  tags = var.common_tags
-}
-
-# IRSA for AWS Load Balancer Controller
-module "aws_load_balancer_controller_irsa" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "~> 5.0"
-
-  role_name = "${var.cluster_name}-aws-lb-controller"
-
-  attach_load_balancer_controller_policy = true
-
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-load-balancer-controller"]
     }
   }
 

@@ -12,25 +12,26 @@ module "rds" {
   family               = var.db_parameter_group_family
   major_engine_version = var.major_engine_version
   instance_class       = var.instance_class
+  
 
   # Storage configuration
   allocated_storage     = var.allocated_storage
   max_allocated_storage = var.max_allocated_storage
   storage_encrypted     = true
-  storage_type          = "gp3"
-  iops                  = 3000
+  storage_type          = "gp2"
+  iops                  = null    ## chanage it
 
   # Database configuration
   db_name  = var.db_name
   username = var.db_username
-  # password = var.db_password
+  password = null
   port     = 5432
 
   # Password management - use random password, stored in Secrets Manager
   manage_master_user_password = true
 
   # High availability
-  multi_az               = true
+  multi_az               = false
   db_subnet_group_name   = var.db_subnet_group_name
   vpc_security_group_ids = var.security_group_ids
 
@@ -50,7 +51,7 @@ module "rds" {
   # Enhanced monitoring
   enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
   create_cloudwatch_log_group     = true
-  monitoring_interval             = 60
+  monitoring_interval             = 0
   monitoring_role_name            = "${var.db_identifier}-monitoring-role"
   create_monitoring_role          = true
 
@@ -79,10 +80,12 @@ module "rds" {
     {
       name  = "log_statement"
       value = "all"
+      apply_method = "pending-reboot"
     },
     {
       name  = "shared_preload_libraries"
       value = "pg_stat_statements"
+      apply_method = "pending-reboot"
     }
   ]
 

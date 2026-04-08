@@ -24,3 +24,8 @@ variable "common_tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "eks_cluster_security_group_id" {
+  description = "EKS cluster SG ID"
+  type        = string
+}

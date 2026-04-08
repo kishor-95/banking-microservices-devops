@@ -29,8 +29,8 @@ spec:
 
       containers:
         - name: auth-service
-          image: kishor95/bankapp-auth-service:latest         # ← fill in your image: e.g. your-registry/auth-service:1.0.0
-          imagePullPolicy: IfNotPresent
+          image: kishor95/bankapp-auth-service:v1.0      #v1. ← fill in your image: e.g. your-registry/auth-service:1.0.0
+          imagePullPolicy: Always
           ports:
           - containerPort: 8001
 

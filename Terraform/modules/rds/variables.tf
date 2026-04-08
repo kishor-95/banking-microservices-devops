@@ -63,7 +63,7 @@ variable "security_group_ids" {
 variable "backup_retention_period" {
   description = "Backup retention period in days"
   type        = number
-  default     = 7
+  default     = 1
 }
 
 variable "deletion_protection" {

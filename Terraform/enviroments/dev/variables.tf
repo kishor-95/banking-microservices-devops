@@ -8,7 +8,7 @@ variable "aws_region" {
 variable "project_name" {
   description = "Project name"
   type        = string
-  default     = "Banking-Microservices"
+  default     = "banking-microservices"
 }
 
 variable "environment" {
@@ -144,4 +144,10 @@ variable "db_skip_final_snapshot" {
   description = "Skip final snapshot on RDS deletion"
   type        = bool
   default     = false
+}
+
+variable "common_tags" {
+  description = "Common tags"
+  type        = map(string)
+  default     = {}
 }

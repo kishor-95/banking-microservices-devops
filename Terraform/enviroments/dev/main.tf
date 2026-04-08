@@ -1,6 +1,6 @@
 # Local variables for cleaner code
 locals {
-  name_prefix = "${var.project_name}-${var.environment}"
+  name_prefix = "${var.project_name}"
   
   common_tags = {
     Project     = var.project_name
@@ -66,6 +66,7 @@ module "security_groups" {
   allowed_ssh_cidr_blocks    = var.allowed_ssh_cidr_blocks
   eks_node_security_group_id = module.eks.node_security_group_id
   common_tags                = local.common_tags
+  eks_cluster_security_group_id = module.eks.cluster_security_group_id
 
   depends_on = [module.eks]
 }

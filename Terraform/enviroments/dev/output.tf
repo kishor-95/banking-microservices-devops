@@ -24,6 +24,10 @@ output "eks_cluster_id" {
   description = "EKS cluster ID"
   value       = module.eks.cluster_id
 }
+output "eks_cluster_name" {
+  description = "This is the name of cluster"
+  value = module.eks.cluster_name
+}
 
 output "eks_cluster_endpoint" {
   description = "EKS cluster endpoint"
@@ -96,7 +100,8 @@ output "connection_instructions" {
     4. RDS Connection:
        - Endpoint: ${module.rds.db_instance_endpoint}
        - Database: ${module.rds.db_instance_name}
-       
+
     ====================================================================
   EOT
+  sensitive = true
 }

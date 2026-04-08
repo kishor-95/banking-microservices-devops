@@ -30,6 +30,7 @@ resource "aws_instance" "bastion" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = var.instance_type
   key_name      = var.key_name
+  iam_instance_profile = aws_iam_instance_profile.bastion.name
 
   subnet_id                   = var.subnet_id
   vpc_security_group_ids      = [var.security_group_id]
@@ -104,4 +105,29 @@ resource "aws_eip" "bastion" {
       Name = "${var.name_prefix}-bastion-eip"
     }
   )
+}
+
+resource "aws_iam_role" "bastion" {
+  name = "${var.name_prefix}-bastion-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "bastion_eks" {
+  role       = aws_iam_role.bastion.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+}
+
+resource "aws_iam_instance_profile" "bastion" {
+  name = "${var.name_prefix}-bastion-profile"
+  role = aws_iam_role.bastion.name
 }
