@@ -9,7 +9,7 @@ module "eks" {
   cluster_version = var.cluster_version
 
   # Private cluster - API endpoint not publicly accessible
-  cluster_endpoint_public_access  = false
+  cluster_endpoint_public_access  = true
   cluster_endpoint_private_access = true
 
   # Enable Cluster logging
@@ -47,7 +47,7 @@ module "eks" {
 
       instance_types = var.node_instance_types
       capacity_type  = "ON_DEMAND"  # For banking, avoid SPOT instances
-      vpc_security_group_ids = [module.security-groups.aws_security_group.eks_additional.id]
+     # vpc_security_group_ids = [module.security-groups.aws_security_group.eks_additional.id]
 
       min_size     = var.node_min_size
       max_size     = var.node_max_size

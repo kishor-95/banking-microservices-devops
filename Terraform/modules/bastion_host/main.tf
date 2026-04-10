@@ -48,11 +48,11 @@ resource "aws_instance" "bastion" {
               set -e
 
               # Update system
-              apt-get update -y
-              apt-get upgrade -y
+              apt update -y
+              apt upgrade -y
 
               # Install basic tools
-              apt-get install -y \
+              apt install -y \
                 curl \
                 unzip \
                 ca-certificates \
@@ -70,7 +70,7 @@ resource "aws_instance" "bastion" {
               install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
               # Install PostgreSQL client
-              apt-get install -y postgresql-client
+              apt install -y postgresql-client
 
               # Install SSM Agent (Ubuntu way)
               snap install amazon-ssm-agent --classic
@@ -130,4 +130,23 @@ resource "aws_iam_role_policy_attachment" "bastion_eks" {
 resource "aws_iam_instance_profile" "bastion" {
   name = "${var.name_prefix}-bastion-profile"
   role = aws_iam_role.bastion.name
+}
+
+resource "aws_iam_role_policy" "bastion_secrets" {
+  name = "${var.name_prefix}-bastion-secrets"
+  role = aws_iam_role.bastion.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
 }

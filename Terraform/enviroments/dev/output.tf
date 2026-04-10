@@ -78,30 +78,30 @@ output "rds_database_name" {
   value       = module.rds.db_instance_name
 }
 
-# Connection Information
-output "connection_instructions" {
-  description = "Instructions for connecting to the infrastructure"
-  value = <<-EOT
+# # Connection Information
+# output "connection_instructions" {
+#   description = "Instructions for connecting to the infrastructure"
+#   value = <<-EOT
     
-    ====================================================================
-    CONNECTION INSTRUCTIONS
-    ====================================================================
+#     ====================================================================
+#     CONNECTION INSTRUCTIONS
+#     ====================================================================
     
-    1. SSH to Bastion:
-       ssh -i /path/to/${var.ec2_key_name}.pem ec2-user@${module.bastion_host.public_ip}
+#     1. SSH to Bastion:
+#        ssh -i /path/to/${var.ec2_key_name}.pem ec2-user@${module.bastion_host.public_ip}
     
-    2. Configure kubectl (from bastion):
-       aws eks update-kubeconfig --region ${var.aws_region} --name ${var.cluster_name}
+#     2. Configure kubectl (from bastion):
+#        aws eks update-kubeconfig --region ${var.aws_region} --name ${var.cluster_name}
     
-    3. Install AWS Load Balancer Controller:
-       See: https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html
-       Use IAM role ARN: ${module.eks.aws_load_balancer_controller_role_arn}
+#     3. Install AWS Load Balancer Controller:
+#        See: https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html
+#        Use IAM role ARN: ${module.eks.aws_load_balancer_controller_role_arn}
     
-    4. RDS Connection:
-       - Endpoint: ${module.rds.db_instance_endpoint}
-       - Database: ${module.rds.db_instance_name}
+#     4. RDS Connection:
+#        - Endpoint: ${module.rds.db_instance_endpoint}
+#        - Database: ${module.rds.db_instance_name}
 
-    ====================================================================
-  EOT
-  sensitive = true
-}
+#     ====================================================================
+#   EOT
+#   sensitive = true
+# }

@@ -61,33 +61,30 @@ resource "aws_security_group" "eks_additional" {
 }
 
 # Allow bastion to access EKS nodes for kubectl
-resource "aws_security_group_rule" "eks_api_from_bastion" {
-  description              = "Allow bastion to access EKS API"
+resource "aws_security_group_rule" "eks_from_bastion" {
   type                     = "ingress"
   from_port                = 443
   to_port                  = 443
   protocol                 = "tcp"
   source_security_group_id = aws_security_group.bastion.id
-
-  # 🔥 THIS IS THE IMPORTANT PART
-  security_group_id = var.eks_cluster_security_group_id
+  security_group_id        = aws_security_group.eks_additional.id
+  description              = "Allow bastion to access EKS API"
 }
-
-# resource "aws_security_group_rule" "eks_from_bastion" {
-#   type                     = "ingress"
-#   from_port                = 443
-#   to_port                  = 443
-#   protocol                 = "tcp"
-#   source_security_group_id = aws_security_group.bastion.id
-#   security_group_id        = aws_security_group.eks_additional.id
-#   description              = "Allow bastion to access EKS API"
-# }
 
 # RDS Security Group
 resource "aws_security_group" "rds" {
   name_prefix = "${var.name_prefix}-rds-"
   description = "Security group for RDS - Allow access from EKS nodes only"
   vpc_id      = var.vpc_id
+
+  # Allow outbound traffic (RDS needs to respond to clients)
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+  }
 
   tags = merge(
     var.common_tags,
