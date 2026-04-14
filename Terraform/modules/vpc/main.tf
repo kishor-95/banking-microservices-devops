@@ -1,53 +1,81 @@
-# VPC Module - Production-grade networking foundation
-# Using official terraform-aws-modules/vpc for battle-tested reliability
+# =============================================================================
+# VPC MODULE - Battle-tested terraform-aws-modules/vpc
+# =============================================================================
+# This module creates:
+# - VPC with configurable CIDR
+# - Public subnets in multiple AZs with NAT gateways
+# - Private app subnets for EKS nodes
+# - Private database subnets for RDS
+# - Database subnet group
+# - Internet gateway
+# - Route tables with proper isolation
+# =============================================================================
+
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.45"
+    }
+  }
+}
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 5.0"
+  version = "~> 5.4"
 
   name = var.vpc_name
   cidr = var.vpc_cidr
 
   azs              = var.availability_zones
-  public_subnets   = var.public_subnet_cidrs
-  private_subnets  = var.private_app_subnet_cidrs
-  database_subnets = var.private_db_subnet_cidrs
+  public_subnets  = [for k, az in var.availability_zones : cidrsubnet(var.vpc_cidr, 4, k)]
+  private_subnets = [for k, az in var.availability_zones : cidrsubnet(var.vpc_cidr, 4, k + var.availability_zones_count)]
+  database_subnets = [for k, az in var.availability_zones : cidrsubnet(var.vpc_cidr, 4, k + (var.availability_zones_count * 2))]
 
-  # Enable DNS for EKS cluster discovery
+  # DNS configuration for EKS cluster discovery and service discovery
   enable_dns_hostnames = true
   enable_dns_support   = true
 
-  # Single NAT Gateway for cost optimization
-  # WARNING: This creates a SPOF. For production banking, use one_nat_gateway_per_az = true
-  enable_nat_gateway = true
+  # NAT Gateway configuration
+  enable_nat_gateway = var.enable_nat_gateway
   single_nat_gateway = var.single_nat_gateway
-  one_nat_gateway_per_az = var.one_nat_gateway_per_az
+  one_nat_gateway_per_az = !var.single_nat_gateway
 
-  # Create database subnet group for RDS
-  create_database_subnet_group = true
+  # Database subnet group for RDS
+  create_database_subnet_group           = true
+  database_subnet_group_name             = "${var.vpc_name}-db-subnet-group"
+  create_database_subnet_route_table     = true
+  create_database_nat_gateway_route      = true
 
-  # Kubernetes subnet tagging for AWS Load Balancer Controller auto-discovery
+  # Public subnet tags for AWS Load Balancer Controller (ALB discovery)
   public_subnet_tags = {
     "kubernetes.io/role/elb"                    = "1"
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+    "Type"                                       = "Public"
   }
 
+  # Private subnet tags for EKS nodes and Load Balancer Controller (internal)
   private_subnet_tags = {
     "kubernetes.io/role/internal-elb"           = "1"
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+    "Type"                                       = "Private-App"
   }
 
+  # Database subnet tags
   database_subnet_tags = {
-    Name = "${var.vpc_name}-db-subnet"
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+    "Type"                                       = "Private-Database"
   }
 
   tags = merge(
     var.common_tags,
     {
-      "kubernetes.io/cluster/${var.cluster_name}" = "shared"
-      Name        = var.vpc_name
-      Environment = var.environment
-      Terraform   = "true"
+      Name              = var.vpc_name
+      Environment       = var.environment
+      ClusterName       = var.cluster_name
+      Terraform         = "true"
     }
   )
 }
+
+data "aws_region" "current" {}

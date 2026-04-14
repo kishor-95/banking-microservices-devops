@@ -1,32 +1,33 @@
-# Security Groups - Least privilege principle enforcement
+# =============================================================================
+# SECURITY GROUPS MODULE - Least Privilege Access Control
+# =============================================================================
+# Creates security groups for:
+# - ALB (Application Load Balancer) - ingress on 80, 443
+# - EKS Nodes - managed by EKS module, additional rules here
+# - RDS - ingress from EKS nodes and ALB on port 5432
+# =============================================================================
 
-# Bastion Security Group
-resource "aws_security_group" "bastion" {
-  name_prefix = "${var.name_prefix}-bastion"
-  description = "Security group for bastion host - SSH access only"
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.45"
+    }
+  }
+}
+
+# =============================================================================
+# ALB SECURITY GROUP
+# =============================================================================
+resource "aws_security_group" "alb" {
+  name_prefix = "${var.name_prefix}-alb-"
+  description = "Security group for Application Load Balancer - HTTP/HTTPS only"
   vpc_id      = var.vpc_id
-
-  ingress {
-    description = "SSH from authorized IP only"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = var.allowed_ssh_cidr_blocks
-  }
-
-  egress {
-    description = "Allow all outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  
 
   tags = merge(
     var.common_tags,
     {
-      Name = "${var.name_prefix}-bastion-sg"
+      Name = "${var.name_prefix}-alb-sg"
     }
   )
 
@@ -35,23 +36,53 @@ resource "aws_security_group" "bastion" {
   }
 }
 
-# EKS Node Security Group (additional rules, EKS module creates primary SG)
+# ALB ingress - HTTP
+resource "aws_security_group_rule" "alb_ingress_http" {
+  type              = "ingress"
+  from_port         = 80
+  to_port           = 80
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.alb.id
+  description       = "HTTP from internet"
+}
+
+# ALB ingress - HTTPS
+resource "aws_security_group_rule" "alb_ingress_https" {
+  type              = "ingress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.alb.id
+  description       = "HTTPS from internet"
+}
+
+# ALB egress - all outbound traffic
+resource "aws_security_group_rule" "alb_egress" {
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.alb.id
+  description       = "Allow all outbound traffic"
+}
+
+# =============================================================================
+# EKS NODES ADDITIONAL SECURITY GROUP
+# =============================================================================
+# EKS module creates primary SG; this allows additional rules
 resource "aws_security_group" "eks_additional" {
   name_prefix = "${var.name_prefix}-eks-additional-"
   description = "Additional security group for EKS nodes"
   vpc_id      = var.vpc_id
 
-    egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   tags = merge(
     var.common_tags,
     {
-      Name = "${var.name_prefix}-eks-additional-sg"
+      Name                                       = "${var.name_prefix}-eks-additional-sg"
+      "kubernetes.io/cluster/${var.cluster_name}" = "owned"
     }
   )
 
@@ -60,31 +91,56 @@ resource "aws_security_group" "eks_additional" {
   }
 }
 
-# Allow bastion to access EKS nodes for kubectl
-resource "aws_security_group_rule" "eks_from_bastion" {
+# Allow EKS nodes to receive traffic from ALB
+resource "aws_security_group_rule" "eks_from_alb_http" {
+  type                     = "ingress"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.alb.id
+  security_group_id        = aws_security_group.eks_additional.id
+  description              = "HTTP traffic from ALB to EKS nodes"
+}
+
+resource "aws_security_group_rule" "eks_from_alb_https" {
   type                     = "ingress"
   from_port                = 443
   to_port                  = 443
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.bastion.id
+  source_security_group_id = aws_security_group.alb.id
   security_group_id        = aws_security_group.eks_additional.id
-  description              = "Allow bastion to access EKS API"
+  description              = "HTTPS traffic from ALB to EKS nodes"
 }
 
-# RDS Security Group
+# Allow EKS nodes to communicate with each other
+resource "aws_security_group_rule" "eks_node_to_node" {
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.eks_additional.id
+  security_group_id        = aws_security_group.eks_additional.id
+  description              = "Node-to-node communication"
+}
+
+# EKS nodes need outbound internet access (pulled images, APIs, etc.)
+resource "aws_security_group_rule" "eks_egress" {
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.eks_additional.id
+  description       = "Allow all outbound traffic for updates, downloads, external APIs"
+}
+
+# =============================================================================
+# RDS SECURITY GROUP
+# =============================================================================
 resource "aws_security_group" "rds" {
   name_prefix = "${var.name_prefix}-rds-"
-  description = "Security group for RDS - Allow access from EKS nodes only"
+  description = "Security group for RDS database - PostgreSQL from EKS only"
   vpc_id      = var.vpc_id
-
-  # Allow outbound traffic (RDS needs to respond to clients)
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow all outbound traffic"
-  }
 
   tags = merge(
     var.common_tags,
@@ -98,24 +154,35 @@ resource "aws_security_group" "rds" {
   }
 }
 
-# RDS ingress rule - dynamically created after EKS security group is available
-resource "aws_security_group_rule" "rds_from_eks" {
+# RDS ingress - PostgreSQL from EKS nodes
+resource "aws_security_group_rule" "rds_from_eks_nodes" {
   type                     = "ingress"
   from_port                = 5432
   to_port                  = 5432
   protocol                 = "tcp"
   source_security_group_id = var.eks_node_security_group_id
   security_group_id        = aws_security_group.rds.id
-  description              = "PostgreSQL access from EKS nodes only"
+  description              = "PostgreSQL (5432) from EKS nodes"
 }
 
-# Allow RDS access from bastion for administrative tasks
-resource "aws_security_group_rule" "rds_from_bastion" {
+# RDS ingress - PostgreSQL from ALB (for health checks if needed)
+resource "aws_security_group_rule" "rds_from_alb" {
   type                     = "ingress"
   from_port                = 5432
   to_port                  = 5432
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.bastion.id
+  source_security_group_id = aws_security_group.alb.id
   security_group_id        = aws_security_group.rds.id
-  description              = "PostgreSQL access from bastion for admin"
+  description              = "PostgreSQL (5432) from ALB"
+}
+
+# RDS egress - allow responses
+resource "aws_security_group_rule" "rds_egress" {
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.rds.id
+  description       = "Allow all outbound traffic"
 }
