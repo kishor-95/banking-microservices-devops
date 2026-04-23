@@ -11,6 +11,8 @@ import os
 import logging
 import random
 import string
+import secrets
+
 
 import psycopg2
 import psycopg2.extras
@@ -64,7 +66,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
 
 def generate_account_number() -> str:
     """16-digit account number, formatted as 4 groups of 4."""
-    digits = "".join(random.choices(string.digits, k=12))
+    digits = "".join(secrets.choice(string.digits) for _ in range(12))
     return digits
 
 
