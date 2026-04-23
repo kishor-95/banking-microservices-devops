@@ -186,7 +186,7 @@ def close_account(account_id: int, user=Depends(get_current_user)):
         if not account["is_active"]:
             raise HTTPException(
                 status_code=409, detail="Account is already closed")
-        if float(account["balance"]) != 0.00:
+        if abs(float(account["balance"])) > 0.001:
             raise HTTPException(
                 status_code=422,
                 detail=(
