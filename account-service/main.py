@@ -126,7 +126,8 @@ def list_accounts(user=Depends(get_current_user)):
 @app.post("/accounts", status_code=201)
 def open_account(body: OpenAccountRequest, user=Depends(get_current_user)):
     if body.account_type not in ("checking", "savings"):
-        raise HTTPException(status_code=422, detail="account_type must be 'checking' or 'savings'")
+        raise HTTPException(status_code=422,
+                             detail="account_type must be 'checking' or 'savings'")
 
     acc_number = generate_account_number()
 
@@ -182,7 +183,10 @@ def close_account(account_id: int, user=Depends(get_current_user)):
         if float(account["balance"]) != 0.00:
             raise HTTPException(
                 status_code=422,
-                detail=f"Balance must be $0.00 before closing. Current balance: ${float(account['balance']):.2f}. Please withdraw remaining funds first."
+                detail=(
+                    "Balance must be $0.00 before closing." 
+                    f"Current balance: ${float(account['balance']):.2f}."
+                    "Please withdraw remaining funds first.")
             )
 
         # Ensure user keeps at least one active account
@@ -207,10 +211,12 @@ def close_account(account_id: int, user=Depends(get_current_user)):
         conn.close()
 
     except HTTPException:
-        if conn: conn.rollback()
+        if conn:
+            conn.rollback()
         raise
     except Exception as exc:
-        if conn: conn.rollback()
+        if conn: 
+            conn.rollback()
         log.error("close_account error: %s", exc)
         raise HTTPException(status_code=500, detail="Database error")
 
