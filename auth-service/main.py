@@ -25,13 +25,13 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("auth-service")
 
 # ── Config (injected via env / K8s ConfigMap + Secret) ───────────────────────
-DB_HOST     = os.getenv("DB_HOST")
-DB_PORT     = os.getenv("DB_PORT")
-DB_NAME     = os.getenv("DB_NAME")
-DB_USER     = os.getenv("DB_USER")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
-JWT_SECRET  = os.getenv("JWT_SECRET")
-JWT_ALGO    = "HS256"
+JWT_SECRET = os.getenv("JWT_SECRET")
+JWT_ALGO = "HS256"
 JWT_EXPIRE_HOURS = int(os.getenv("JWT_EXPIRE_HOURS", "24"))
 
 # ── FastAPI app ───────────────────────────────────────────────────────────────
@@ -47,6 +47,8 @@ app.add_middleware(
 security = HTTPBearer()
 
 # ── DB helpers ────────────────────────────────────────────────────────────────
+
+
 def get_conn():
     return psycopg2.connect(
         host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
@@ -122,7 +124,7 @@ def register(body: RegisterRequest):
 
     try:
         conn = get_conn()
-        cur  = conn.cursor()
+        cur = conn.cursor()
         cur.execute(
             """
             INSERT INTO users (username, email, password_hash, full_name)
@@ -136,7 +138,8 @@ def register(body: RegisterRequest):
         cur.close()
         conn.close()
     except psycopg2.errors.UniqueViolation:
-        raise HTTPException(status_code=409, detail="Username or email already exists")
+        raise HTTPException(
+            status_code=409, detail="Username or email already exists")
     except Exception as exc:
         log.error("register error: %s", exc)
         raise HTTPException(status_code=500, detail="Database error")
@@ -150,7 +153,7 @@ def register(body: RegisterRequest):
 def login(body: LoginRequest):
     try:
         conn = get_conn()
-        cur  = conn.cursor()
+        cur = conn.cursor()
         cur.execute(
             "SELECT id, username, password_hash, is_active FROM users WHERE username = %s",
             (body.username.strip().lower(),),

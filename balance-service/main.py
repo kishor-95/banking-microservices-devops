@@ -13,19 +13,22 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("balance-service")
 
 # ── Config ────────────────────────────────────────────────────────────────────
-DB_HOST     = os.getenv("DB_HOST")
-DB_PORT     = os.getenv("DB_PORT")
-DB_NAME     = os.getenv("DB_NAME")
-DB_USER     = os.getenv("DB_USER")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
-JWT_SECRET  = os.getenv("JWT_SECRET")
-JWT_ALGO    = "HS256"
+JWT_SECRET = os.getenv("JWT_SECRET")
+JWT_ALGO = "HS256"
 # ── FastAPI ───────────────────────────────────────────────────────────────────
 app = FastAPI(title="BankApp · Balance Service", version="1.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=[
+                   "*"], allow_methods=["*"], allow_headers=["*"])
 security = HTTPBearer()
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+
 def get_conn():
     return psycopg2.connect(
         host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
@@ -36,7 +39,8 @@ def get_conn():
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     try:
-        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGO])
+        payload = jwt.decode(credentials.credentials,
+                             JWT_SECRET, algorithms=[JWT_ALGO])
         return {"user_id": int(payload["sub"]), "username": payload["username"]}
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
@@ -58,7 +62,7 @@ def get_balance(account_id: int, user=Depends(get_current_user)):
     """
     try:
         conn = get_conn()
-        cur  = conn.cursor()
+        cur = conn.cursor()
         cur.execute(
             """
             SELECT a.id, a.account_number, a.account_type, a.balance,
@@ -102,7 +106,7 @@ def get_all_balances(user=Depends(get_current_user)):
     """Return balances for all accounts belonging to the authenticated user."""
     try:
         conn = get_conn()
-        cur  = conn.cursor()
+        cur = conn.cursor()
         cur.execute(
             """
             SELECT id, account_number, account_type, balance, is_active, created_at

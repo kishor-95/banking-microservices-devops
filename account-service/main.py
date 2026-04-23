@@ -34,10 +34,13 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGO = "HS256"
 # ── FastAPI ───────────────────────────────────────────────────────────────────
 app = FastAPI(title="BankApp · Account Service", version="1.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=[
+                   "*"], allow_methods=["*"], allow_headers=["*"])
 security = HTTPBearer()
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+
 def get_conn():
     return psycopg2.connect(
         host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
@@ -49,7 +52,8 @@ def get_conn():
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     """Validate JWT locally — no network hop to auth-service for hot paths."""
     try:
-        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGO])
+        payload = jwt.decode(credentials.credentials,
+                             JWT_SECRET, algorithms=[JWT_ALGO])
         return {"user_id": int(payload["sub"]), "username": payload["username"]}
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
@@ -127,7 +131,7 @@ def list_accounts(user=Depends(get_current_user)):
 def open_account(body: OpenAccountRequest, user=Depends(get_current_user)):
     if body.account_type not in ("checking", "savings"):
         raise HTTPException(status_code=422,
-                             detail="account_type must be 'checking' or 'savings'")
+                            detail="account_type must be 'checking' or 'savings'")
 
     acc_number = generate_account_number()
 
@@ -140,8 +144,8 @@ def open_account(body: OpenAccountRequest, user=Depends(get_current_user)):
             VALUES (%s, %s, %s, 0.00)
             RETURNING id, account_number, account_type, balance, created_at
             """,
-            (user["user_id"], acc_number, body.account_type),
-        )
+            (user["user_id"], acc_number, body.account_type)  # edited
+        ),
         account = cur.fetchone()
         conn.commit()
         cur.close()
@@ -179,12 +183,13 @@ def close_account(account_id: int, user=Depends(get_current_user)):
         if account["user_id"] != user["user_id"]:
             raise HTTPException(status_code=403, detail="Access denied")
         if not account["is_active"]:
-            raise HTTPException(status_code=409, detail="Account is already closed")
+            raise HTTPException(
+                status_code=409, detail="Account is already closed")
         if float(account["balance"]) != 0.00:
             raise HTTPException(
                 status_code=422,
                 detail=(
-                    "Balance must be $0.00 before closing." 
+                    "Balance must be $0.00 before closing."
                     f"Current balance: ${float(account['balance']):.2f}."
                     "Please withdraw remaining funds first.")
             )
@@ -215,7 +220,7 @@ def close_account(account_id: int, user=Depends(get_current_user)):
             conn.rollback()
         raise
     except Exception as exc:
-        if conn: 
+        if conn:
             conn.rollback()
         log.error("close_account error: %s", exc)
         raise HTTPException(status_code=500, detail="Database error")

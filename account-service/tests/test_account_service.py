@@ -26,7 +26,7 @@ from fastapi.testclient import TestClient
 from main import app, get_current_user
 
 # ── Fake authenticated user ───────────────────────────────────────────────────
-FAKE_USER     = {"user_id": 1, "username": "testuser"}
+FAKE_USER = {"user_id": 1, "username": "testuser"}
 FAKE_USER_ALT = {"user_id": 2, "username": "otheruser"}
 
 client = TestClient(app, raise_server_exceptions=False)
@@ -43,7 +43,7 @@ def inject_fake_auth():
 
 def make_mock_conn(fetchone=None, fetchall=None, fetchone_side_effect=None):
     conn = MagicMock()
-    cur  = MagicMock()
+    cur = MagicMock()
     conn.cursor.return_value = cur
     if fetchone_side_effect:
         cur.fetchone.side_effect = fetchone_side_effect
@@ -98,8 +98,8 @@ class TestGetProfile:
 
         assert resp.status_code == 200
         body = resp.json()
-        assert body["username"]  == "testuser"
-        assert body["email"]     == "test@example.com"
+        assert body["username"] == "testuser"
+        assert body["email"] == "test@example.com"
         assert body["full_name"] == "Test User"
 
     @patch("main.get_conn")
@@ -191,7 +191,7 @@ class TestOpenAccount:
         assert resp.status_code == 201
         body = resp.json()
         assert body["account_type"] == "checking"
-        assert body["balance"]      == 0.0
+        assert body["balance"] == 0.0
 
     @patch("main.get_conn")
     def test_open_savings_account_returns_201(self, mock_get_conn):
@@ -276,7 +276,8 @@ class TestCloseAccount:
     def test_close_account_wrong_owner_returns_403(self, mock_get_conn):
         """Account belongs to user_id=99, authenticated as user_id=1 → 403."""
         conn, cur = make_mock_conn(
-            fetchone={"id": 5, "user_id": 99, "balance": 0.00, "is_active": True}
+            fetchone={"id": 5, "user_id": 99,
+                      "balance": 0.00, "is_active": True}
         )
         mock_get_conn.return_value = conn
 
@@ -288,7 +289,8 @@ class TestCloseAccount:
     def test_close_already_closed_account_returns_409(self, mock_get_conn):
         """is_active=False → 409 Already closed."""
         conn, cur = make_mock_conn(
-            fetchone={"id": 1, "user_id": 1, "balance": 0.00, "is_active": False}
+            fetchone={"id": 1, "user_id": 1,
+                      "balance": 0.00, "is_active": False}
         )
         mock_get_conn.return_value = conn
 
@@ -299,7 +301,8 @@ class TestCloseAccount:
     def test_close_account_nonzero_balance_returns_422(self, mock_get_conn):
         """Balance=$150 → 422 (must withdraw first)."""
         conn, cur = make_mock_conn(
-            fetchone={"id": 1, "user_id": 1, "balance": 150.00, "is_active": True}
+            fetchone={"id": 1, "user_id": 1,
+                      "balance": 150.00, "is_active": True}
         )
         mock_get_conn.return_value = conn
 

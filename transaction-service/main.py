@@ -15,19 +15,22 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("transaction-service")
 
 # ── Config ────────────────────────────────────────────────────────────────────
-DB_HOST     = os.getenv("DB_HOST")
-DB_PORT     = os.getenv("DB_PORT")
-DB_NAME     = os.getenv("DB_NAME")
-DB_USER     = os.getenv("DB_USER")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
-JWT_SECRET  = os.getenv("JWT_SECRET")
-JWT_ALGO    = "HS256"
+JWT_SECRET = os.getenv("JWT_SECRET")
+JWT_ALGO = "HS256"
 # ── FastAPI ───────────────────────────────────────────────────────────────────
 app = FastAPI(title="BankApp · Transaction Service", version="1.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=[
+                   "*"], allow_methods=["*"], allow_headers=["*"])
 security = HTTPBearer()
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+
 def get_conn():
     conn = psycopg2.connect(
         host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
@@ -40,7 +43,8 @@ def get_conn():
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     try:
-        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGO])
+        payload = jwt.decode(credentials.credentials,
+                             JWT_SECRET, algorithms=[JWT_ALGO])
         return {"user_id": int(payload["sub"]), "username": payload["username"]}
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
@@ -121,7 +125,8 @@ def deposit(body: TransactionRequest, user=Depends(get_current_user)):
         )
         txn = cur.fetchone()
         conn.commit()
-        log.info("Deposit $%.2f → account %d (balance now $%.2f)", body.amount, body.account_id, new_balance)
+        log.info("Deposit $%.2f → account %d (balance now $%.2f)",
+                 body.amount, body.account_id, new_balance)
 
     except HTTPException:
         conn.rollback()
@@ -155,7 +160,8 @@ def withdraw(body: TransactionRequest, user=Depends(get_current_user)):
         if body.amount > current_balance:
             raise HTTPException(
                 status_code=422,
-                detail=f"Insufficient funds. Available: ${current_balance:.2f}",
+                detail=f"Insufficient funds. Available: ${
+                    current_balance:.2f}",
             )
 
         new_balance = current_balance - body.amount
@@ -174,7 +180,8 @@ def withdraw(body: TransactionRequest, user=Depends(get_current_user)):
         )
         txn = cur.fetchone()
         conn.commit()
-        log.info("Withdraw $%.2f ← account %d (balance now $%.2f)", body.amount, body.account_id, new_balance)
+        log.info("Withdraw $%.2f ← account %d (balance now $%.2f)",
+                 body.amount, body.account_id, new_balance)
 
     except HTTPException:
         conn.rollback()
@@ -205,10 +212,11 @@ def transaction_history(
 ):
     try:
         conn = get_conn()
-        cur  = conn.cursor()
+        cur = conn.cursor()
 
         # Ownership check
-        cur.execute("SELECT user_id FROM accounts WHERE id = %s", (account_id,))
+        cur.execute("SELECT user_id FROM accounts WHERE id = %s",
+                    (account_id,))
         acc = cur.fetchone()
         if not acc:
             raise HTTPException(status_code=404, detail="Account not found")
@@ -227,7 +235,8 @@ def transaction_history(
         )
         rows = cur.fetchall()
 
-        cur.execute("SELECT COUNT(*) as total FROM transactions WHERE account_id = %s", (account_id,))
+        cur.execute(
+            "SELECT COUNT(*) as total FROM transactions WHERE account_id = %s", (account_id,))
         total = cur.fetchone()["total"]
 
         cur.close()
