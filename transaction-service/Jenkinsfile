@@ -1,4 +1,4 @@
-@Library('bankapp-shared@main') _
+@Library('vaultx-shared-lib@main') _
 
 pythonMicroservicePipeline(
     serviceName         : 'transaction-service',
