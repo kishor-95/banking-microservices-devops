@@ -1,0 +1,11 @@
+@Library('bankapp-shared@main') _
+
+frontendPipeline(
+    serviceName         : 'frontend',
+    serviceDir          : 'frontend',
+    containerName       : 'frontend',
+    deploymentFile      : 'kubernetes/frontend/deployment.yaml',
+    coverageThreshold   : 75,
+    gitCredentialsId    : 'git-creds',
+    dockerCredentialsId : 'docker-creds'
+)

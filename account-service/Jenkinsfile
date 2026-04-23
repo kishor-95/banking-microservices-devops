@@ -1,0 +1,11 @@
+@Library('bankapp-shared@main') _
+
+pythonMicroservicePipeline(
+    serviceName         : 'account-service',
+    serviceDir          : 'account-service',
+    containerName       : 'account-service',
+    deploymentFile      : 'kubernetes/account-service/deployment.yaml',
+    coverageThreshold   : 80,
+    gitCredentialsId    : 'git-creds',
+    dockerCredentialsId : 'docker-creds'
+)
