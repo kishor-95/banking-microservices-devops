@@ -23,6 +23,7 @@ from pydantic import BaseModel
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("account-service")
+DB_ERROR = "Database error"
 
 # ── Config ────────────────────────────────────────────────────────────────────
 DB_HOST = os.getenv("DB_HOST")
@@ -95,7 +96,7 @@ def get_profile(user=Depends(get_current_user)):
         conn.close()
     except Exception as exc:
         log.error("profile fetch error: %s", exc)
-        raise HTTPException(status_code=500, detail="Database error")
+        raise HTTPException(status_code=500, detail=DB_ERROR)
 
     if not profile:
         raise HTTPException(status_code=404, detail="User not found")
@@ -122,7 +123,7 @@ def list_accounts(user=Depends(get_current_user)):
         conn.close()
     except Exception as exc:
         log.error("list_accounts error: %s", exc)
-        raise HTTPException(status_code=500, detail="Database error")
+        raise HTTPException(status_code=500, detail=DB_ERROR)
 
     return [dict(a) for a in accounts]
 
@@ -152,7 +153,7 @@ def open_account(body: OpenAccountRequest, user=Depends(get_current_user)):
         conn.close()
     except Exception as exc:
         log.error("open_account error: %s", exc)
-        raise HTTPException(status_code=500, detail="Database error")
+        raise HTTPException(status_code=500, detail=DB_ERROR)
 
     log.info("Account opened: %s for user %s", acc_number, user["username"])
     return dict(account)
