@@ -25,13 +25,13 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("account-service")
 
 # ── Config ────────────────────────────────────────────────────────────────────
-DB_HOST     = os.getenv("DB_HOST")
-DB_PORT     = os.getenv("DB_PORT")
-DB_NAME     = os.getenv("DB_NAME")
-DB_USER     = os.getenv("DB_USER")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
-JWT_SECRET  = os.getenv("JWT_SECRET")
-JWT_ALGO    = "HS256"
+JWT_SECRET = os.getenv("JWT_SECRET")
+JWT_ALGO = "HS256"
 # ── FastAPI ───────────────────────────────────────────────────────────────────
 app = FastAPI(title="BankApp · Account Service", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -81,7 +81,7 @@ def health():
 def get_profile(user=Depends(get_current_user)):
     try:
         conn = get_conn()
-        cur  = conn.cursor()
+        cur = conn.cursor()
         cur.execute(
             "SELECT id, username, email, full_name, created_at FROM users WHERE id = %s",
             (user["user_id"],),
@@ -103,7 +103,7 @@ def get_profile(user=Depends(get_current_user)):
 def list_accounts(user=Depends(get_current_user)):
     try:
         conn = get_conn()
-        cur  = conn.cursor()
+        cur = conn.cursor()
         cur.execute(
             """
             SELECT id, account_number, account_type, balance, is_active, created_at
@@ -132,7 +132,7 @@ def open_account(body: OpenAccountRequest, user=Depends(get_current_user)):
 
     try:
         conn = get_conn()
-        cur  = conn.cursor()
+        cur = conn.cursor()
         cur.execute(
             """
             INSERT INTO accounts (user_id, account_number, account_type, balance)
@@ -164,7 +164,7 @@ def close_account(account_id: int, user=Depends(get_current_user)):
     try:
         conn = get_conn()
         conn.autocommit = False
-        cur  = conn.cursor()
+        cur = conn.cursor()
 
         # Fetch the account with row lock
         cur.execute(
