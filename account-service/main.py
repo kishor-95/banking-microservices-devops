@@ -231,7 +231,7 @@
 #     return {"message": "Account successfully closed", "account_id": account_id}
 
 
-## New Code 
+# New Code
 """account-service — FastAPI
 Responsibilities:
   POST /accounts           → open a new bank account for the authenticated user
@@ -329,12 +329,15 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         if not JWT_SECRET:
             raise jwt.InvalidTokenError("JWT secret not configured")
 
-        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGO])
+        payload = jwt.decode(credentials.credentials,
+                             JWT_SECRET, algorithms=[JWT_ALGO])
         return {"user_id": int(payload["sub"]), "username": payload["username"]}
     except jwt.ExpiredSignatureError as exc:
-        raise HTTPException(status_code=401, detail=TOKEN_EXPIRED_DETAIL) from exc
+        raise HTTPException(
+            status_code=401, detail=TOKEN_EXPIRED_DETAIL) from exc
     except (jwt.InvalidTokenError, KeyError, TypeError, ValueError) as exc:
-        raise HTTPException(status_code=401, detail=INVALID_TOKEN_DETAIL) from exc
+        raise HTTPException(
+            status_code=401, detail=INVALID_TOKEN_DETAIL) from exc
 
 
 def generate_account_number() -> str:
@@ -405,7 +408,8 @@ def list_accounts(user=Depends(get_current_user)):
 @app.post("/accounts", status_code=201)
 def open_account(body: OpenAccountRequest, user=Depends(get_current_user)):
     if body.account_type not in ACCOUNT_TYPES:
-        raise HTTPException(status_code=422, detail=ACCOUNT_TYPE_VALIDATION_DETAIL)
+        raise HTTPException(
+            status_code=422, detail=ACCOUNT_TYPE_VALIDATION_DETAIL)
 
     acc_number = generate_account_number()
 
@@ -451,17 +455,21 @@ def close_account(account_id: int, user=Depends(get_current_user)):
                     account = cur.fetchone()
 
                     if not account:
-                        raise HTTPException(status_code=404, detail=ACCOUNT_NOT_FOUND_DETAIL)
+                        raise HTTPException(
+                            status_code=404, detail=ACCOUNT_NOT_FOUND_DETAIL)
                     if account["user_id"] != user["user_id"]:
-                        raise HTTPException(status_code=403, detail=ACCESS_DENIED_DETAIL)
+                        raise HTTPException(
+                            status_code=403, detail=ACCESS_DENIED_DETAIL)
                     if not account["is_active"]:
-                        raise HTTPException(status_code=409, detail=ACCOUNT_ALREADY_CLOSED_DETAIL)
+                        raise HTTPException(
+                            status_code=409, detail=ACCOUNT_ALREADY_CLOSED_DETAIL)
                     if not _is_zero_balance(account["balance"]):
                         balance_value = Decimal(str(account["balance"]))
                         raise HTTPException(
                             status_code=422,
                             detail=(
-                                f"Balance must be $0.00 before closing. Current balance: ${balance_value:.2f}. "
+                                f"Balance must be $0.00 before closing. Current balance: ${
+                                    balance_value:.2f}. "
                                 "Please withdraw remaining funds first."
                             ),
                         )
