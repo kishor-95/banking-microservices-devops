@@ -21,7 +21,7 @@ WORKDIR /app
 
 # Only runtime deps (no gcc here)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
+    libpq5 curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies from wheels
@@ -32,7 +32,7 @@ RUN pip install --no-cache-dir /wheels/*
 RUN adduser --disabled-password --gecos "" appuser
 
 # Copy app with correct ownership
-COPY --chown=appuser:appuser:ro . .
+COPY --chown=appuser:appuser . .
 
 USER appuser
 
