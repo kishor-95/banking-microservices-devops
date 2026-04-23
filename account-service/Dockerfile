@@ -32,7 +32,7 @@ RUN pip install --no-cache-dir /wheels/*
 RUN adduser --disabled-password --gecos "" appuser
 
 # Copy app with correct ownership
-COPY --chown=appuser:appuser . .
+COPY --chown=appuser:appuser:ro . .
 
 USER appuser
 
