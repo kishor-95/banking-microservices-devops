@@ -229,5 +229,3 @@ def close_account(account_id: int, user=Depends(get_current_user)):
 
     log.info("Account %d closed by user %s", account_id, user["username"])
     return {"message": "Account successfully closed", "account_id": account_id}
-
-
