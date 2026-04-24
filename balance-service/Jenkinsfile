@@ -4,8 +4,9 @@ pythonMicroservicePipeline(
     serviceName         : 'balance-service',
     serviceDir          : 'balance-service',
     containerName       : 'balance-service',
-    deploymentFile      : 'kubernetes/balance-service/deployment.yaml',
+    deploymentFile      : 'kubernetes/balance-service/balance-service-deployment.yaml',
     coverageThreshold   : 80,
     gitCredentialsId    : 'git-creds',
-    dockerCredentialsId : 'docker-creds'
+    dockerCredentialsId : 'docker-creds',
+    namespace           : 'kishor95'
 )
