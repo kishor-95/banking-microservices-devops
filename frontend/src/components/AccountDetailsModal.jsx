@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { AlertTriangle, Wallet } from "lucide-react";
 import { api, parseApiError } from "../api/client";
 
 const money   = (n) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
@@ -51,7 +52,7 @@ export default function AccountDetailsModal({ account, balance, history = [], on
             <div style={{ ...m.typeChip, background: isChecking ? "rgba(99,102,241,0.15)" : "rgba(16,185,129,0.15)", color: isChecking ? "#a5b4fc" : "#6ee7b7" }}>
               {account.account_type.toUpperCase()}
             </div>
-            <span style={m.title}>Account Details</span>
+            <span style={m.title}>Account Overview</span>
           </div>
           {!confirmStep && (
             <button style={m.closeBtn} onClick={onClose}>✕</button>
@@ -61,7 +62,7 @@ export default function AccountDetailsModal({ account, balance, history = [], on
         {/* Confirm close panel */}
         {confirmStep ? (
           <div style={m.confirmPanel}>
-            <div style={m.warnIcon}>⚠️</div>
+            <AlertTriangle color="#f59e0b" />
             <h3 style={m.confirmTitle}>Close this account?</h3>
             <p style={m.confirmDesc}>
               This permanently deactivates account ending in{" "}
@@ -73,7 +74,7 @@ export default function AccountDetailsModal({ account, balance, history = [], on
 
             {hasBalance && (
               <div style={m.blocker}>
-                <span style={m.blockerIcon}>💰</span>
+                <Wallet color="#10b981" />
                 <span>Withdraw your remaining <strong>{money(balance)}</strong> balance first</span>
               </div>
             )}
@@ -155,7 +156,7 @@ export default function AccountDetailsModal({ account, balance, history = [], on
 
             {/* Mini stats */}
             <div style={m.section}>
-              <p style={m.sectionTitle}>Activity Summary <span style={m.histNote}>(current page)</span></p>
+              <p style={m.sectionTitle}> Account Activity <span style={m.histNote}>(current page)</span></p>
               <div style={m.statsRow}>
                 <StatBox label="Deposits"     value={money(totalDeposits)}    color="#10b981" />
                 <StatBox label="Withdrawals"  value={money(totalWithdrawals)} color="#f59e0b" />

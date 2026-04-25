@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Landmark } from "lucide-react";
 import { api } from "../api/client";
 
 const money   = (n) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
@@ -76,7 +77,7 @@ export default function UserProfileModal({ onClose, accounts, balances }) {
                           ? "rgba(99,102,241,0.2)" : "rgba(16,185,129,0.2)",
                         color: acc.account_type === "checking" ? "#a5b4fc" : "#6ee7b7",
                       }}>
-                        {acc.account_type === "checking" ? "C" : "S"}
+                        <Landmark size={14} />
                       </div>
                       <div>
                         <p style={p.accType}>

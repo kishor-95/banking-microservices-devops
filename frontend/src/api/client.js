@@ -1,30 +1,3 @@
-/**
- * src/api/client.js  —  FIXED
- *
- * ROOT CAUSE THIS FILE WAS CAUSING:
- * ─────────────────────────────────────────────────────────────────────────────
- * The original SERVICES object used hardcoded fallback URLs:
- *   auth: import.meta.env.VITE_AUTH_URL || "http://localhost:8001"
- *
- * Vite resolves import.meta.env.* at BUILD TIME, not runtime.
- * In Docker (no --build-arg passed), VITE_AUTH_URL is undefined →
- * the fallback "http://localhost:8001" is baked into the static JS bundle.
- *
- * The browser then fires requests to http://localhost:8001 — which is the
- * USER'S MACHINE, not Docker. Backend ports are intentionally not exposed
- * on the host (correctly commented out in docker-compose.yml).
- * Ad blockers/browsers block this non-standard direct port hit →
- * ERR_BLOCKED_BY_CLIENT.
- *
- * THE FIX:
- * ─────────────────────────────────────────────────────────────────────────────
- * Single Axios instance, empty baseURL → all calls use the browser's current
- * origin (relative paths). Works identically in:
- *   • Dev:  Vite dev server receives /api/... → proxies to localhost:800X
- *   • Prod: Nginx receives /api/... → proxies to http://service-name:port
- *
- * No VITE_* env vars, no localhost hardcoding, no build-time differences.
- */
 
 import axios from "axios";
 
