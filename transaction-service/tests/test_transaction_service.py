@@ -26,9 +26,8 @@ Run (from the service directory, conftest.py patches sys.path):
 """
 
 import os
-import sys
 from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import jwt
 import pytest
