@@ -21,7 +21,7 @@ WORKDIR /app
 
 # Only runtime deps (no gcc here)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 curl \
+    libpq5  \
     && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies from wheels

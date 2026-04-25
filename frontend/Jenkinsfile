@@ -8,5 +8,6 @@ frontendPipeline(
     coverageThreshold   : 75,
     gitCredentialsId    : 'git-creds',
     dockerCredentialsId : 'docker-creds',
-    namespace           : 'kishor95'
+    namespace           : 'kishor95',
+    gitOpsRepo          : 'https://github.com/kishor-95/banking-microservices-devops.git'
 )
