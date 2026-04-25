@@ -11,6 +11,14 @@ RUN npm run build
 
 # Stage 2: Nginx
 FROM nginx:1.25-alpine
+# Declare ARGs in this stage
+ARG BUILD_DATE
+ARG GIT_COMMIT
+ARG IMAGE_TAG
+
+LABEL org.opencontainers.image.created=$BUILD_DATE \
+      org.opencontainers.image.revision=$GIT_COMMIT \
+      org.opencontainers.image.version=$IMAGE_TAG
 
 RUN rm /etc/nginx/conf.d/default.conf
 
