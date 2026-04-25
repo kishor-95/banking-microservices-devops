@@ -56,7 +56,7 @@ _TEST_JWT_SECRET = _APP_SECRET  # single source of truth; never drift
 # ── Shared constants & client ──────────────────────────────────────────────────
 # ══════════════════════════════════════════════════════════════════════════════
 
-FAKE_USER     = {"user_id": 1, "username": "testuser"}
+FAKE_USER = {"user_id": 1, "username": "testuser"}
 FAKE_USER_ALT = {"user_id": 2, "username": "otheruser"}
 
 client = TestClient(app, raise_server_exceptions=False)
@@ -174,9 +174,9 @@ def _make_conn(fetchone_seq: list | None = None,
         execute_raises: if set, cur.execute() raises this exception on every call.
     """
     conn = MagicMock()
-    cur  = MagicMock()
+    cur = MagicMock()
     conn.cursor.return_value = cur
-    conn.autocommit          = False
+    conn.autocommit = False
 
     if execute_raises:
         cur.execute.side_effect = execute_raises
@@ -223,7 +223,7 @@ class TestHealth:
 
     def test_response_contract(self):
         body = client.get("/transactions/health").json()
-        assert body["status"]  == "ok"
+        assert body["status"] == "ok"
         assert body["service"] == "transaction-service"
 
     def test_reachable_without_auth_header(self):
@@ -346,7 +346,8 @@ class TestDeposit:
         """No upper limit in business logic — large amounts must pass."""
         conn, cur = _make_conn(fetchone_seq=[
             _account_locked_row(),
-            _txn_returning_row(amount=1_000_000.00, balance_after=1_000_500.00),
+            _txn_returning_row(amount=1_000_000.00,
+                               balance_after=1_000_500.00),
         ])
         mock_conn.return_value = conn
 
@@ -364,7 +365,8 @@ class TestDeposit:
         ])
         mock_conn.return_value = conn
 
-        client.post("/transactions/deposit", json={"account_id": 1, "amount": 10.0})
+        client.post("/transactions/deposit",
+                    json={"account_id": 1, "amount": 10.0})
         conn.commit.assert_called_once()
 
     @patch("main.get_conn")
@@ -376,7 +378,8 @@ class TestDeposit:
         ])
         mock_conn.return_value = conn
 
-        client.post("/transactions/deposit", json={"account_id": 1, "amount": 10.0})
+        client.post("/transactions/deposit",
+                    json={"account_id": 1, "amount": 10.0})
         conn.close.assert_called_once()
 
     @patch("main.get_conn")
@@ -398,7 +401,8 @@ class TestDeposit:
         HTTPException (404) → rollback called, re-raised as-is (not 500),
         close still called via finally.
         """
-        conn, cur = _make_conn(fetchone_seq=[None])   # _get_account_locked → 404
+        conn, cur = _make_conn(
+            fetchone_seq=[None])   # _get_account_locked → 404
         mock_conn.return_value = conn
 
         resp = client.post("/transactions/deposit",
@@ -424,7 +428,8 @@ class TestDeposit:
     @patch("main.get_conn")
     def test_db_error_detail_is_generic(self, mock_conn):
         """500 detail must never leak internal error messages to the client."""
-        conn, cur = _make_conn(execute_raises=Exception("pg password auth failed"))
+        conn, cur = _make_conn(
+            execute_raises=Exception("pg password auth failed"))
         mock_conn.return_value = conn
 
         body = client.post("/transactions/deposit",
@@ -460,7 +465,8 @@ class TestDeposit:
 
     @patch("main.get_conn")
     def test_inactive_account_returns_403(self, mock_conn):
-        conn, cur = _make_conn(fetchone_seq=[_account_locked_row(is_active=False)])
+        conn, cur = _make_conn(
+            fetchone_seq=[_account_locked_row(is_active=False)])
         mock_conn.return_value = conn
 
         resp = client.post("/transactions/deposit",
@@ -659,7 +665,8 @@ class TestWithdraw:
     @patch("main.get_conn")
     def test_insufficient_funds_returns_422(self, mock_conn):
         """amount > balance → 422 (HTTPException raised inside withdraw)."""
-        conn, cur = _make_conn(fetchone_seq=[_account_locked_row(balance=50.0)])
+        conn, cur = _make_conn(
+            fetchone_seq=[_account_locked_row(balance=50.0)])
         mock_conn.return_value = conn
 
         resp = client.post("/transactions/withdraw",
@@ -671,7 +678,8 @@ class TestWithdraw:
     @patch("main.get_conn")
     def test_insufficient_funds_shows_available_balance(self, mock_conn):
         """Error detail must display the actual available balance for UX."""
-        conn, cur = _make_conn(fetchone_seq=[_account_locked_row(balance=42.50)])
+        conn, cur = _make_conn(
+            fetchone_seq=[_account_locked_row(balance=42.50)])
         mock_conn.return_value = conn
 
         detail = client.post("/transactions/withdraw",
@@ -690,7 +698,8 @@ class TestWithdraw:
     @patch("main.get_conn")
     def test_one_cent_over_balance_is_rejected(self, mock_conn):
         """$100.01 from $100.00 — no overdraft, even by one cent."""
-        conn, cur = _make_conn(fetchone_seq=[_account_locked_row(balance=100.0)])
+        conn, cur = _make_conn(
+            fetchone_seq=[_account_locked_row(balance=100.0)])
         mock_conn.return_value = conn
 
         resp = client.post("/transactions/withdraw",
@@ -780,7 +789,8 @@ class TestWithdraw:
 
     @patch("main.get_conn")
     def test_inactive_account_returns_403(self, mock_conn):
-        conn, cur = _make_conn(fetchone_seq=[_account_locked_row(is_active=False)])
+        conn, cur = _make_conn(
+            fetchone_seq=[_account_locked_row(is_active=False)])
         mock_conn.return_value = conn
 
         resp = client.post("/transactions/withdraw",
@@ -872,7 +882,8 @@ class TestTransactionHistory:
         conn, cur = _make_conn(
             fetchone_seq=[
                 _history_ownership_row(user_id=owner_user_id),
-                _history_count_row(total=total if total is not None else len(rows)),
+                _history_count_row(
+                    total=total if total is not None else len(rows)),
             ],
             fetchall_rows=rows,
         )
@@ -882,7 +893,8 @@ class TestTransactionHistory:
 
     @patch("main.get_conn")
     def test_success_returns_200(self, mock_conn):
-        conn, cur = self._success_conn([_history_txn_row(), _history_txn_row(txn_id=2)])
+        conn, cur = self._success_conn(
+            [_history_txn_row(), _history_txn_row(txn_id=2)])
         mock_conn.return_value = conn
 
         resp = client.get("/transactions/1")
@@ -896,10 +908,10 @@ class TestTransactionHistory:
 
         body = client.get("/transactions/1").json()
 
-        assert body["account_id"]    == 1
-        assert body["total"]         == 1
-        assert body["limit"]         == 20      # default
-        assert body["offset"]        == 0       # default
+        assert body["account_id"] == 1
+        assert body["total"] == 1
+        assert body["limit"] == 20      # default
+        assert body["offset"] == 0       # default
         assert isinstance(body["transactions"], list)
 
     @patch("main.get_conn")
@@ -986,7 +998,7 @@ class TestTransactionHistory:
         mock_conn.return_value = conn
 
         body = client.get("/transactions/1?limit=5&offset=40").json()
-        assert body["limit"]  == 5
+        assert body["limit"] == 5
         assert body["offset"] == 40
 
     @pytest.mark.parametrize("limit,offset,expected", [
@@ -1021,7 +1033,8 @@ class TestTransactionHistory:
     @patch("main.get_conn")
     def test_wrong_owner_returns_403(self, mock_conn):
         """user_id mismatch on ownership check → 403."""
-        conn, cur = _make_conn(fetchone_seq=[_history_ownership_row(user_id=99)])
+        conn, cur = _make_conn(
+            fetchone_seq=[_history_ownership_row(user_id=99)])
         mock_conn.return_value = conn
 
         resp = client.get("/transactions/1")
@@ -1224,7 +1237,8 @@ class TestGetAccountLockedBranches:
     @patch("main.get_conn")
     def test_branch_is_active_false(self, mock_conn):
         """is_active=False  ⟹  403."""
-        conn, cur = _make_conn(fetchone_seq=[_account_locked_row(is_active=False)])
+        conn, cur = _make_conn(
+            fetchone_seq=[_account_locked_row(is_active=False)])
         mock_conn.return_value = conn
 
         assert client.post("/transactions/withdraw",

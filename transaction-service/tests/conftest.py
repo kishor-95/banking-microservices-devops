@@ -13,6 +13,7 @@ os.environ.setdefault("DB_NAME", "testdb")
 os.environ.setdefault("DB_USER", "testuser")
 os.environ.setdefault("DB_PASSWORD", "testpass")
 
+
 def pytest_configure(config):
     config.addinivalue_line("markers", "api: HTTP-level integration tests")
     config.addinivalue_line("markers", "unit: unit tests")
