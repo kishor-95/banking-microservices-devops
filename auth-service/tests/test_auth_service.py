@@ -22,7 +22,6 @@ from unittest.mock import MagicMock, patch
 
 import jwt
 import psycopg2.errors
-import pytest
 from fastapi.testclient import TestClient
 
 from main import app  # conftest.py ensures env vars are set before this import
@@ -50,10 +49,10 @@ def make_token(user_id: int = 1, username: str = "testuser", expired: bool = Fal
 def make_mock_conn(fetchone_result=None, fetchall_result=None):
     """Return a (conn, cur) MagicMock pair wired together."""
     conn = MagicMock()
-    cur  = MagicMock()
+    cur = MagicMock()
     conn.cursor.return_value = cur
-    cur.fetchone.return_value  = fetchone_result
-    cur.fetchall.return_value  = fetchall_result or []
+    cur.fetchone.return_value = fetchone_result
+    cur.fetchall.return_value = fetchall_result or []
     return conn, cur
 
 
@@ -89,15 +88,16 @@ class TestRegister:
         self, mock_get_conn, mock_hashpw, mock_gensalt
     ):
         """Happy path: DB inserts user, service returns 201 + JWT."""
-        conn, cur = make_mock_conn(fetchone_result={"id": 42, "username": "kishor95"})
+        conn, cur = make_mock_conn(
+            fetchone_result={"id": 42, "username": "kishor95"})
         mock_get_conn.return_value = conn
 
         resp = client.post("/auth/register", json=self.VALID_PAYLOAD)
 
         assert resp.status_code == 201
         body = resp.json()
-        assert body["user_id"]    == 42
-        assert body["username"]   == "kishor95"
+        assert body["user_id"] == 42
+        assert body["username"] == "kishor95"
         assert body["token_type"] == "bearer"
         assert "access_token" in body
         assert len(body["access_token"]) > 20  # real JWT, not empty string
@@ -183,7 +183,7 @@ class TestLogin:
 
         assert resp.status_code == 200
         body = resp.json()
-        assert body["username"]   == "kishor95"
+        assert body["username"] == "kishor95"
         assert body["token_type"] == "bearer"
         assert "access_token" in body
 
@@ -205,7 +205,8 @@ class TestLogin:
         conn, cur = make_mock_conn(fetchone_result=None)
         mock_get_conn.return_value = conn
 
-        resp = client.post("/auth/login", json={"username": "nobody", "password": "pass1234"})
+        resp = client.post(
+            "/auth/login", json={"username": "nobody", "password": "pass1234"})
 
         assert resp.status_code == 401
         assert resp.json()["detail"] == "Invalid credentials"
@@ -213,7 +214,8 @@ class TestLogin:
     @patch("main.get_conn")
     def test_login_disabled_account_returns_403(self, mock_get_conn):
         """is_active=False → 403 Account disabled (checked before bcrypt)."""
-        conn, cur = make_mock_conn(fetchone_result=self._active_user_row(is_active=False))
+        conn, cur = make_mock_conn(
+            fetchone_result=self._active_user_row(is_active=False))
         mock_get_conn.return_value = conn
 
         resp = client.post("/auth/login", json=self.VALID_PAYLOAD)
@@ -251,15 +253,15 @@ class TestVerify:
     def test_verify_valid_token_returns_claims(self):
         """Valid Bearer token → 200 with decoded user claims."""
         token = make_token(user_id=7, username="kishor95")
-        resp  = client.get(
+        resp = client.get(
             "/auth/verify",
             headers={"Authorization": f"Bearer {token}"}
         )
 
         assert resp.status_code == 200
         body = resp.json()
-        assert body["valid"]    is True
-        assert body["user_id"]  == "7"
+        assert body["valid"] is True
+        assert body["user_id"] == "7"
         assert body["username"] == "kishor95"
 
     def test_verify_garbage_token_returns_401(self):
