@@ -4,8 +4,10 @@ pythonMicroservicePipeline(
     serviceName         : 'transaction-service',
     serviceDir          : 'transaction-service',
     containerName       : 'transaction-service',
-    deploymentFile      : 'kubernetes/transaction-service/deployment.yaml',
+    deploymentFile      : 'kubernetes/transaction-service/transaction-service-deployment.yaml',
     coverageThreshold   : 82,
     gitCredentialsId    : 'git-creds',
-    dockerCredentialsId : 'docker-creds'
+    dockerCredentialsId : 'docker-creds',
+    namespace           : 'kishor95',
+    gitOpsRepo          : 'https://github.com/kishor-95/banking-microservices-devops.git'
 )

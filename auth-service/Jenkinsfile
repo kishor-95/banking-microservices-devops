@@ -4,8 +4,10 @@ pythonMicroservicePipeline(
     serviceName         : 'auth-service',
     serviceDir          : 'auth-service',
     containerName       : 'auth-service',
-    deploymentFile      : 'kubernetes/auth-service/deployment.yaml',
+    deploymentFile      : 'kubernetes/auth-service/auth-service-deployment.yaml',
     coverageThreshold   : 85,
     gitCredentialsId    : 'git-creds',
-    dockerCredentialsId : 'docker-creds'
+    dockerCredentialsId : 'docker-creds',
+    namespace           : 'kishor95',
+    gitOpsRepo          : 'https://github.com/kishor-95/banking-microservices-devops.git'
 )

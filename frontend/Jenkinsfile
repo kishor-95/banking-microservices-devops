@@ -1,11 +1,13 @@
 @Library('vaultx-shared-lib@main') _
 
 frontendPipeline(
-    serviceName         : 'frontend',
-    serviceDir          : 'frontend',
-    containerName       : 'frontend',
-    deploymentFile      : 'kubernetes/frontend/deployment.yaml',
+    serviceName         : 'bankapp-frontend',
+    serviceDir          : 'bankapp-frontend',
+    containerName       : 'bankapp-frontend',
+    deploymentFile      : 'kubernetes/frontend/frontend-service-deployment',
     coverageThreshold   : 75,
     gitCredentialsId    : 'git-creds',
-    dockerCredentialsId : 'docker-creds'
+    dockerCredentialsId : 'docker-creds',
+    namespace           : 'kishor95',
+    gitOpsRepo          : 'https://github.com/kishor-95/banking-microservices-devops.git'
 )
