@@ -2,6 +2,7 @@
 # ── Stage 1: build dependencies ───────────────────────────────
 FROM python:3.12-slim AS builder
 
+
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -17,6 +18,15 @@ RUN pip install --upgrade pip \
 
 # ── Stage 2: runtime (clean image) ────────────────────────────
 FROM python:3.12-slim
+
+# Declare ARGs in this stage
+ARG BUILD_DATE
+ARG GIT_COMMIT
+ARG IMAGE_TAG
+
+LABEL org.opencontainers.image.created=$BUILD_DATE \
+      org.opencontainers.image.revision=$GIT_COMMIT \
+      org.opencontainers.image.version=$IMAGE_TAG
 
 WORKDIR /app
 
