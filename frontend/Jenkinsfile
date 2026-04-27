@@ -5,7 +5,7 @@ frontendPipeline(
     serviceDir          : 'frontend',
     containerName       : 'bankapp-frontend',
     deploymentFile      : 'kubernetes/frontend/frontend-service-deployment',
-    coverageThreshold   : 75,
+    coverageThreshold   : 80,
     gitCredentialsId    : 'git-creds',
     dockerCredentialsId : 'docker-creds',
     namespace           : 'kishor95',
