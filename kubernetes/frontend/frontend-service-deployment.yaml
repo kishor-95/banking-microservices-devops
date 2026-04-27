@@ -26,36 +26,36 @@ spec:
           configMap:
             name: nginx-config
       containers:
-      - image: kishor95/bankapp-frontend:latest
-        imagePullPolicy: IfNotPresent
-        name: bankapp-frontend
-        ports:
-        - containerPort: 80
-          protocol: TCP
-        volumeMounts:
-        - name: nginx-config
-          mountPath: /etc/nginx/nginx.conf
-          subPath: nginx.conf
-        resources:
-          limits:
-            cpu: "100m"
-            memory: "128Mi"
-          requests:
-            cpu: "50m"
-            memory: "64Mi"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 80
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 80
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 2
+        - image: docker.io/kishor95/bankapp-frontend:56d6acb-37
+          imagePullPolicy: IfNotPresent
+          name: bankapp-frontend
+          ports:
+            - containerPort: 80
+              protocol: TCP
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+          resources:
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
