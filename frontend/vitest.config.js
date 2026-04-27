@@ -4,46 +4,52 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
 
-  // ── Vitest ────────────────────────────────────────────────────────────────
   test: {
-    globals:      true,
-    environment:  "jsdom",
-    setupFiles:   "./src/__tests__/setup.js",
-    clearMocks:   true,
+    globals: true,
+    environment: "jsdom",
+    setupFiles: "./src/__tests__/setup.js",
+    clearMocks: true,
+
+    // 🔥 CRITICAL FOR SONAR
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "lcov"],   // MUST include lcov
+      reportsDirectory: "./coverage",
+      exclude: [
+        "src/main.jsx",        // optional: no logic
+        "src/__tests__/**",
+      ],
+    },
   },
 
   server: {
     port: 3000,
     proxy: {
-      // /api/auth/* → http://localhost:8001/auth/*
       "/api/auth": {
-        target:      "http://localhost:8001",
+        target: "http://localhost:8001",
         changeOrigin: true,
-        rewrite:     (path) => path.replace(/^\/api/, ""),
+        rewrite: (path) => path.replace(/^\/api/, ""),
       },
-      // /api/accounts/* → http://localhost:8002/accounts/*
       "/api/accounts": {
-        target:      "http://localhost:8002",
+        target: "http://localhost:8002",
         changeOrigin: true,
-        rewrite:     (path) => path.replace(/^\/api/, ""),
+        rewrite: (path) => path.replace(/^\/api/, ""),
       },
-      // /api/balance/* → http://localhost:8003/balance/*
       "/api/balance": {
-        target:      "http://localhost:8003",
+        target: "http://localhost:8003",
         changeOrigin: true,
-        rewrite:     (path) => path.replace(/^\/api/, ""),
+        rewrite: (path) => path.replace(/^\/api/, ""),
       },
-      // /api/transactions/* → http://localhost:8004/transactions/*
       "/api/transactions": {
-        target:      "http://localhost:8004",
+        target: "http://localhost:8004",
         changeOrigin: true,
-        rewrite:     (path) => path.replace(/^\/api/, ""),
+        rewrite: (path) => path.replace(/^\/api/, ""),
       },
     },
   },
 
   build: {
-    outDir:    "dist",
+    outDir: "dist",
     sourcemap: false,
   },
 });
