@@ -2,7 +2,7 @@
 
 frontendPipeline(
     serviceName         : 'bankapp-frontend',
-    serviceDir          : 'bankapp-frontend',
+    serviceDir          : 'frontend',
     containerName       : 'bankapp-frontend',
     deploymentFile      : 'kubernetes/frontend/frontend-service-deployment',
     coverageThreshold   : 75,
