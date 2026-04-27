@@ -28,7 +28,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: auth-service
-          image: docker.io/kishor95/auth-service:20ff9eb-7 #v1. ← fill in your image: e.g. your-registry/auth-service:1.0.0
+          image: docker.io/kishor95/auth-service:17acf00-8 #v1. ← fill in your image: e.g. your-registry/auth-service:1.0.0
           imagePullPolicy: Always
           ports:
             - containerPort: 8001
