@@ -31,7 +31,7 @@ WORKDIR /app
 
 # Only runtime deps (no gcc here)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
+    libpq5 curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies from wheels
@@ -50,7 +50,7 @@ EXPOSE 8002
 
 # Add healthcheck
 HEALTHCHECK --interval=30s --timeout=5s \
-  CMD curl -f http://localhost:8004/health || exit 1
+  CMD curl -f http://localhost:8004/transactions/health || exit 1
 
 # Production-ready uvicorn
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8004", "--workers", "2"]
