@@ -33,6 +33,7 @@ def _histogram(name: str, doc: str, labels: list, buckets: list) -> Histogram:
 
 # ── Auth service metrics ──────────────────────────────────────────────────────
 
+
 AUTH_REGISTRATIONS = _counter(
     "bankapp_auth_registrations_total",
     "User registration attempts. status=[success|failure]",
