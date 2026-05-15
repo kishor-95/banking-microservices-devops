@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY account-service/requirements.txt requirements.txt
 
 # Build wheels (faster installs later)
 RUN pip install --upgrade pip \
@@ -31,7 +31,7 @@ WORKDIR /app
 
 # Only runtime deps (no gcc here)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 curl \
+    libpq5 curl  \
     && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies from wheels
@@ -42,7 +42,8 @@ RUN pip install --no-cache-dir /wheels/*
 RUN adduser --disabled-password --gecos "" appuser
 
 # Copy app with correct ownership
-COPY --chown=appuser:appuser . .
+COPY --chown=appuser:appuser account-service/ .
+COPY --chown=appuser:appuser common/ ./common/
 
 USER appuser
 
@@ -54,3 +55,4 @@ HEALTHCHECK --interval=30s --timeout=10s  --retries=3 \
 
 # Production-ready uvicorn
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8002", "--workers", "2"]
+

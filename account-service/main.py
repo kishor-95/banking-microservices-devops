@@ -1,17 +1,18 @@
 """
-account-service  —  FastAPI
-Responsibilities:
-  POST /accounts           → open a new bank account for the authenticated user
-  GET  /accounts/me        → list all accounts for the authenticated user
-  GET  /accounts/profile   → return user profile info
-  GET  /accounts/health    → liveness probe
+account-service — FastAPI
+Endpoints:
+  GET    /accounts/health          liveness probe
+  GET    /accounts/profile         user profile
+  GET    /accounts/me              list user accounts
+  POST   /accounts                 open account
+  DELETE /accounts/{account_id}    close account
 """
 
 import os
+import sys
 import logging
+import random
 import string
-import secrets
-
 
 import psycopg2
 import psycopg2.extras
@@ -21,12 +22,18 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 from pydantic import BaseModel
 
-# ── Logging ───────────────────────────────────────────────────────────────────
+# ── Metrics (NEW) ─────────────────────────────────────────────────────────────
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from common.metrics import (
+    setup_metrics,
+    ACCOUNTS_OPENED,
+    ACCOUNTS_CLOSED,
+    PROFILE_FETCHES,
+)
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("account-service")
-DB_ERROR = "Database error"
 
-# ── Config ────────────────────────────────────────────────────────────────────
 DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_NAME")
@@ -34,28 +41,34 @@ DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGO = "HS256"
-# ── FastAPI ───────────────────────────────────────────────────────────────────
-app = FastAPI(title="BankApp · Account Service", version="1.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=[
-                   "*"], allow_methods=["*"], allow_headers=["*"])
-security = HTTPBearer()
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+app = FastAPI(title="BankApp · Account Service", version="1.0.0")
+app.add_middleware(
+    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+)
+
+# ── Prometheus setup (NEW) ────────────────────────────────────────────────────
+setup_metrics(app, service_name="account-service")
+
+security = HTTPBearer()
 
 
 def get_conn():
     return psycopg2.connect(
-        host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
-        user=DB_USER, password=DB_PASSWORD,
+        host=DB_HOST,
+        port=DB_PORT,
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD,
         cursor_factory=psycopg2.extras.RealDictCursor,
     )
 
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
-    """Validate JWT locally — no network hop to auth-service for hot paths."""
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> dict:
     try:
-        payload = jwt.decode(credentials.credentials,
-                             JWT_SECRET, algorithms=[JWT_ALGO])
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGO])
         return {"user_id": int(payload["sub"]), "username": payload["username"]}
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
@@ -64,20 +77,13 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
 
 
 def generate_account_number() -> str:
-    """16-digit account number, formatted as 4 groups of 4."""
-    digits = "".join(secrets.choice(string.digits) for _ in range(12))
-    return digits
+    return "".join(random.choices(string.digits, k=12))
 
 
-# ── Pydantic models ───────────────────────────────────────────────────────────
 class OpenAccountRequest(BaseModel):
     account_type: str = "checking"
 
-    class Config:
-        json_schema_extra = {"example": {"account_type": "savings"}}
 
-
-# ── Routes ────────────────────────────────────────────────────────────────────
 @app.get("/accounts/health")
 def health():
     return {"status": "ok", "service": "account-service"}
@@ -96,12 +102,15 @@ def get_profile(user=Depends(get_current_user)):
         cur.close()
         conn.close()
     except Exception as exc:
-        log.error("profile fetch error: %s", exc)
-        raise HTTPException(status_code=500, detail=DB_ERROR)
+        log.error("profile error: %s", exc)
+        PROFILE_FETCHES.labels(status="db_error").inc()  # NEW
+        raise HTTPException(status_code=500, detail="Database error")
 
     if not profile:
+        PROFILE_FETCHES.labels(status="not_found").inc()  # NEW
         raise HTTPException(status_code=404, detail="User not found")
 
+    PROFILE_FETCHES.labels(status="success").inc()  # NEW
     return dict(profile)
 
 
@@ -113,9 +122,7 @@ def list_accounts(user=Depends(get_current_user)):
         cur.execute(
             """
             SELECT id, account_number, account_type, balance, is_active, created_at
-            FROM accounts
-            WHERE user_id = %s
-            ORDER BY created_at DESC
+            FROM accounts WHERE user_id = %s ORDER BY created_at DESC
             """,
             (user["user_id"],),
         )
@@ -124,7 +131,7 @@ def list_accounts(user=Depends(get_current_user)):
         conn.close()
     except Exception as exc:
         log.error("list_accounts error: %s", exc)
-        raise HTTPException(status_code=500, detail=DB_ERROR)
+        raise HTTPException(status_code=500, detail="Database error")
 
     return [dict(a) for a in accounts]
 
@@ -132,11 +139,11 @@ def list_accounts(user=Depends(get_current_user)):
 @app.post("/accounts", status_code=201)
 def open_account(body: OpenAccountRequest, user=Depends(get_current_user)):
     if body.account_type not in ("checking", "savings"):
-        raise HTTPException(status_code=422,
-                            detail="account_type must be 'checking' or 'savings'")
+        raise HTTPException(
+            status_code=422, detail="account_type must be 'checking' or 'savings'"
+        )
 
     acc_number = generate_account_number()
-
     try:
         conn = get_conn()
         cur = conn.cursor()
@@ -146,34 +153,33 @@ def open_account(body: OpenAccountRequest, user=Depends(get_current_user)):
             VALUES (%s, %s, %s, 0.00)
             RETURNING id, account_number, account_type, balance, created_at
             """,
-            (user["user_id"], acc_number, body.account_type)  # edited
-        ),
+            (user["user_id"], acc_number, body.account_type),
+        )
         account = cur.fetchone()
         conn.commit()
         cur.close()
         conn.close()
     except Exception as exc:
         log.error("open_account error: %s", exc)
-        raise HTTPException(status_code=500, detail=DB_ERROR)
+        ACCOUNTS_OPENED.labels(
+            status="failure", account_type=body.account_type
+        ).inc()  # NEW
+        raise HTTPException(status_code=500, detail="Database error")
 
-    log.info("Account opened: %s for user %s", acc_number, user["username"])
+    ACCOUNTS_OPENED.labels(
+        status="success", account_type=body.account_type
+    ).inc()  # NEW
     return dict(account)
 
 
-@app.delete("/accounts/{account_id}", status_code=200)
+@app.delete("/accounts/{account_id}")
 def close_account(account_id: int, user=Depends(get_current_user)):
-    """
-    Soft-close an account. Rules:
-      1. Must be the owner
-      2. Balance must be $0.00 (withdraw first)
-      3. Must have at least one other active account remaining
-    """
+    conn = None
     try:
         conn = get_conn()
         conn.autocommit = False
         cur = conn.cursor()
 
-        # Fetch the account with row lock
         cur.execute(
             "SELECT id, user_id, balance, is_active FROM accounts WHERE id = %s FOR UPDATE",
             (account_id,),
@@ -181,37 +187,33 @@ def close_account(account_id: int, user=Depends(get_current_user)):
         account = cur.fetchone()
 
         if not account:
+            ACCOUNTS_CLOSED.labels(status="not_found").inc()  # NEW
             raise HTTPException(status_code=404, detail="Account not found")
         if account["user_id"] != user["user_id"]:
+            ACCOUNTS_CLOSED.labels(status="denied").inc()  # NEW
             raise HTTPException(status_code=403, detail="Access denied")
         if not account["is_active"]:
-            raise HTTPException(
-                status_code=409, detail="Account is already closed")
-        if abs(float(account["balance"])) > 0.001:
+            ACCOUNTS_CLOSED.labels(status="already_closed").inc()  # NEW
+            raise HTTPException(status_code=409, detail="Account already closed")
+        if float(account["balance"]) != 0.00:
+            ACCOUNTS_CLOSED.labels(status="balance_nonzero").inc()  # NEW
             raise HTTPException(
                 status_code=422,
-                detail=(
-                    "Balance must be $0.00 before closing."
-                    f"Current balance: ${float(account['balance']):.2f}."
-                    "Please withdraw remaining funds first.")
+                detail=f"Balance must be $0.00 before closing. Current: ${float(account['balance']):.2f}",
             )
 
-        # Ensure user keeps at least one active account
         cur.execute(
-            "SELECT COUNT(*) as active_count FROM accounts WHERE user_id = %s AND is_active = TRUE",
+            "SELECT COUNT(*) as c FROM accounts WHERE user_id = %s AND is_active = TRUE",
             (user["user_id"],),
         )
-        active_count = cur.fetchone()["active_count"]
-        if active_count <= 1:
+        if cur.fetchone()["c"] <= 1:
+            ACCOUNTS_CLOSED.labels(status="last_account").inc()  # NEW
             raise HTTPException(
-                status_code=422,
-                detail="Cannot close your only active account. Open a new account first."
+                status_code=422, detail="Cannot close your only active account"
             )
 
-        # Soft-close — preserve all history
         cur.execute(
-            "UPDATE accounts SET is_active = FALSE, updated_at = NOW() WHERE id = %s",
-            (account_id,),
+            "UPDATE accounts SET is_active = FALSE WHERE id = %s", (account_id,)
         )
         conn.commit()
         cur.close()
@@ -225,7 +227,8 @@ def close_account(account_id: int, user=Depends(get_current_user)):
         if conn:
             conn.rollback()
         log.error("close_account error: %s", exc)
+        ACCOUNTS_CLOSED.labels(status="db_error").inc()  # NEW
         raise HTTPException(status_code=500, detail="Database error")
 
-    log.info("Account %d closed by user %s", account_id, user["username"])
+    ACCOUNTS_CLOSED.labels(status="success").inc()  # NEW
     return {"message": "Account successfully closed", "account_id": account_id}
