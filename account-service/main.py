@@ -199,8 +199,10 @@ def close_account(account_id: int, user=Depends(get_current_user)):
             ACCOUNTS_CLOSED.labels(status="balance_nonzero").inc()  # NEW
             raise HTTPException(
                 status_code=422,
-                detail=f"Balance must be $0.00 before closing." 
-                "Current: ${float(account['balance']):.2f}",
+                detail=(
+                    "Balance must be $0.00 before closing." 
+                    f"Current balance: ${float(account['balance']):.2f}."
+                    "Please withdraw remaining funds first.")
             )
 
         cur.execute(
