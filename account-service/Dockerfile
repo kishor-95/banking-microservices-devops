@@ -43,7 +43,6 @@ RUN adduser --disabled-password --gecos "" appuser
 
 # Copy app with correct ownership
 COPY --chown=appuser:appuser account-service/ .
-COPY --chown=appuser:appuser common/ ./common/
 
 USER appuser
 

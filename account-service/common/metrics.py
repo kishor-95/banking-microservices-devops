@@ -32,6 +32,7 @@ def _histogram(name: str, doc: str, labels: list, buckets: list) -> Histogram:
 
 # ── Account service metrics ───────────────────────────────────────────────────
 
+
 ACCOUNTS_OPENED = _counter(
     "bankapp_accounts_opened_total",
     "Accounts opened. status=[success|failure], account_type=[checking|savings]",
