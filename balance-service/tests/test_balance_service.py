@@ -179,11 +179,11 @@ class TestGetBalance:
         resp = client.get("/balance/1")
         assert resp.status_code == 500
 
-    def test_get_balance_no_auth_returns_403(self):
-        """Without auth override, missing header → 403."""
+    def test_get_balance_no_auth_returns_401(self):
+        """Without auth override, missing header → 401."""
         app.dependency_overrides.clear()
         resp = client.get("/balance/1")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
         app.dependency_overrides[get_current_user] = lambda: FAKE_USER
 
 
