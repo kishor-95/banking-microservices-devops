@@ -17,7 +17,7 @@ enable_nat_gateway       = true
 # EKS CLUSTER CONFIGURATION
 # =============================================================================
 cluster_name               = "bankapp-eks"
-cluster_version            = "1.36"
+cluster_version            = "1.34"
 node_instance_types        = ["c7i-flex.large"] # Changed from c7i-flex.large for cost savings
 node_min_size              = 2
 node_max_size              = 5
