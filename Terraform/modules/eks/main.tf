@@ -15,14 +15,14 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.45"
+      #      version = ">= 6.42.0"
     }
   }
 }
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 20.4"
+  version = "~> 20.37"
 
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version
@@ -91,7 +91,7 @@ module "eks" {
       # Launch template configuration
       create_launch_template = true
       launch_template_name   = "${var.cluster_name}-launch-template"
-      launch_template_version = "$Latest"
+      launch_template_version = 1
 
       # EBS configuration with encryption
       block_device_mappings = {
@@ -162,7 +162,7 @@ module "eks" {
     # Create before compute to ensure proper node initialization
     vpc-cni = {
       most_recent = true
-      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+      #service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
       before_compute = true
       timeouts = {
         create = "30m"
