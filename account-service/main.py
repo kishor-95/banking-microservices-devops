@@ -441,7 +441,7 @@ def close_account(account_id: int, user=Depends(get_current_user)):
             )
 
         cur.execute(
-            "SELECT COUNT(*) as c FROM accounts WHERE user_id = %s AND is_active = TRUE",
+            "SELECT COUNT(*) AS active_count FROM accounts WHERE user_id = %s AND is_active = TRUE",
             (user["user_id"],),
         )
         if cur.fetchone()["c"] <= 1:
