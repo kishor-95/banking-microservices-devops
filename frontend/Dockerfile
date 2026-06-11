@@ -27,7 +27,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=5s \
-  CMD -f http://localhost/health || exit 1
+  CMD curl -f http://localhost/health || exit 1
 
 EXPOSE 80
 

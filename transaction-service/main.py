@@ -1,4 +1,14 @@
+"""
+transaction-service — FastAPI
+Endpoints:
+  GET  /transactions/health          liveness probe
+  POST /transactions/deposit         deposit funds
+  POST /transactions/withdraw        withdraw funds
+  GET  /transactions/{account_id}    transaction history (paginated)
+"""
+
 import os
+import sys
 import logging
 from typing import Optional
 
@@ -10,11 +20,13 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 from pydantic import BaseModel, field_validator
 
-# ── Logging ───────────────────────────────────────────────────────────────────
+# ── Metrics (NEW) ─────────────────────────────────────────────────────────────
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from common.metrics import setup_metrics, TRANSACTIONS, TRANSACTION_AMOUNT
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("transaction-service")
 
-# ── Config ────────────────────────────────────────────────────────────────────
 DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_NAME")
@@ -22,29 +34,36 @@ DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGO = "HS256"
-# ── FastAPI ───────────────────────────────────────────────────────────────────
-app = FastAPI(title="BankApp · Transaction Service", version="1.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=[
-                   "*"], allow_methods=["*"], allow_headers=["*"])
-security = HTTPBearer()
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+app = FastAPI(title="BankApp · Transaction Service", version="1.0.0")
+app.add_middleware(
+    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+)
+
+# ── Prometheus setup (NEW) ────────────────────────────────────────────────────
+setup_metrics(app, service_name="transaction-service")
+
+security = HTTPBearer()
 
 
 def get_conn():
     conn = psycopg2.connect(
-        host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
-        user=DB_USER, password=DB_PASSWORD,
+        host=DB_HOST,
+        port=DB_PORT,
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD,
         cursor_factory=psycopg2.extras.RealDictCursor,
     )
-    conn.autocommit = False   # explicit transaction management
+    conn.autocommit = False
     return conn
 
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> dict:
     try:
-        payload = jwt.decode(credentials.credentials,
-                             JWT_SECRET, algorithms=[JWT_ALGO])
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGO])
         return {"user_id": int(payload["sub"]), "username": payload["username"]}
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
@@ -52,18 +71,10 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
-def _get_account_locked(cur, account_id: int, user_id: int):
-    """
-    Fetch the account row with a row-level lock.
-    Also verifies ownership.
-    """
+def _get_account_locked(cur, account_id: int, user_id: int) -> dict:
+    """Fetch account row with row-level lock + ownership check."""
     cur.execute(
-        """
-        SELECT a.id, a.balance, a.is_active, a.user_id
-        FROM accounts a
-        WHERE a.id = %s
-        FOR UPDATE
-        """,
+        "SELECT id, balance, is_active, user_id FROM accounts WHERE id = %s FOR UPDATE",
         (account_id,),
     )
     account = cur.fetchone()
@@ -76,10 +87,9 @@ def _get_account_locked(cur, account_id: int, user_id: int):
     return account
 
 
-# ── Pydantic models ───────────────────────────────────────────────────────────
 class TransactionRequest(BaseModel):
-    account_id:  int
-    amount:      float
+    account_id: int
+    amount: float
     description: Optional[str] = None
 
     @field_validator("amount")
@@ -92,7 +102,6 @@ class TransactionRequest(BaseModel):
         return round(v, 2)
 
 
-# ── Routes ────────────────────────────────────────────────────────────────────
 @app.get("/transactions/health")
 def health():
     return {"status": "ok", "service": "transaction-service"}
@@ -103,48 +112,50 @@ def deposit(body: TransactionRequest, user=Depends(get_current_user)):
     conn = get_conn()
     try:
         cur = conn.cursor()
-
-        # Lock row
         account = _get_account_locked(cur, body.account_id, user["user_id"])
-        new_balance = float(account["balance"]) + body.amount
+        new_bal = float(account["balance"]) + body.amount
 
-        # Update balance
         cur.execute(
-            "UPDATE accounts SET balance = %s WHERE id = %s",
-            (new_balance, body.account_id),
+            "UPDATE accounts SET balance = %s WHERE id = %s", (new_bal, body.account_id)
         )
-
-        # Append ledger entry
         cur.execute(
             """
             INSERT INTO transactions (account_id, type, amount, balance_after, description)
             VALUES (%s, 'DEPOSIT', %s, %s, %s)
             RETURNING id, type, amount, balance_after, created_at, reference_id
             """,
-            (body.account_id, body.amount, new_balance, body.description),
+            (body.account_id, body.amount, new_bal, body.description),
         )
         txn = cur.fetchone()
         conn.commit()
-        log.info("Deposit $%.2f → account %d (balance now $%.2f)",
-                 body.amount, body.account_id, new_balance)
 
-    except HTTPException:
+        TRANSACTIONS.labels(type="DEPOSIT", status="success").inc()  # NEW
+        TRANSACTION_AMOUNT.labels(type="DEPOSIT").observe(body.amount)  # NEW
+
+    except HTTPException as exc:
         conn.rollback()
+        label = (
+            "not_found"
+            if exc.status_code == 404
+            else "denied" if exc.status_code == 403 else "error"
+        )
+        TRANSACTIONS.labels(type="DEPOSIT", status=label).inc()  # NEW
         raise
     except Exception as exc:
         conn.rollback()
         log.error("deposit error: %s", exc)
+        TRANSACTIONS.labels(type="DEPOSIT", status="db_error").inc()  # NEW
         raise HTTPException(status_code=500, detail="Database error")
     finally:
         conn.close()
 
     return {
-        "transaction_id":  txn["id"],
-        "reference_id":    str(txn["reference_id"]),
-        "type":            txn["type"],
-        "amount":          float(txn["amount"]),
-        "balance_after":   float(txn["balance_after"]),
-        "created_at":      txn["created_at"],
+        "transaction_id": txn["id"],
+        "reference_id": str(txn["reference_id"]),
+        "type": txn["type"],
+        "amount": float(txn["amount"]),
+        "balance_after": float(txn["balance_after"]),
+        "created_at": txn["created_at"],
     }
 
 
@@ -153,22 +164,20 @@ def withdraw(body: TransactionRequest, user=Depends(get_current_user)):
     conn = get_conn()
     try:
         cur = conn.cursor()
-
         account = _get_account_locked(cur, body.account_id, user["user_id"])
-        current_balance = float(account["balance"])
+        current = float(account["balance"])
 
-        if body.amount > current_balance:
+        if body.amount > current:
+            TRANSACTIONS.labels(
+                type="WITHDRAW", status="insufficient_funds"
+            ).inc()  # NEW
             raise HTTPException(
-                status_code=422,
-                detail=f"Insufficient funds. Available: ${
-                    current_balance:.2f}",
+                status_code=422, detail=f"Insufficient funds. Available: ${current:.2f}"
             )
 
-        new_balance = current_balance - body.amount
-
+        new_bal = current - body.amount
         cur.execute(
-            "UPDATE accounts SET balance = %s WHERE id = %s",
-            (new_balance, body.account_id),
+            "UPDATE accounts SET balance = %s WHERE id = %s", (new_bal, body.account_id)
         )
         cur.execute(
             """
@@ -176,37 +185,42 @@ def withdraw(body: TransactionRequest, user=Depends(get_current_user)):
             VALUES (%s, 'WITHDRAW', %s, %s, %s)
             RETURNING id, type, amount, balance_after, created_at, reference_id
             """,
-            (body.account_id, body.amount, new_balance, body.description),
+            (body.account_id, body.amount, new_bal, body.description),
         )
         txn = cur.fetchone()
         conn.commit()
-        log.info("Withdraw $%.2f ← account %d (balance now $%.2f)",
-                 body.amount, body.account_id, new_balance)
 
-    except HTTPException:
+        TRANSACTIONS.labels(type="WITHDRAW", status="success").inc()  # NEW
+        TRANSACTION_AMOUNT.labels(type="WITHDRAW").observe(body.amount)  # NEW
+
+    except HTTPException as exc:
         conn.rollback()
+        if exc.status_code not in (422,):
+            label = "not_found" if exc.status_code == 404 else "denied"
+            TRANSACTIONS.labels(type="WITHDRAW", status=label).inc()  # NEW
         raise
     except Exception as exc:
         conn.rollback()
         log.error("withdraw error: %s", exc)
+        TRANSACTIONS.labels(type="WITHDRAW", status="db_error").inc()  # NEW
         raise HTTPException(status_code=500, detail="Database error")
     finally:
         conn.close()
 
     return {
-        "transaction_id":  txn["id"],
-        "reference_id":    str(txn["reference_id"]),
-        "type":            txn["type"],
-        "amount":          float(txn["amount"]),
-        "balance_after":   float(txn["balance_after"]),
-        "created_at":      txn["created_at"],
+        "transaction_id": txn["id"],
+        "reference_id": str(txn["reference_id"]),
+        "type": txn["type"],
+        "amount": float(txn["amount"]),
+        "balance_after": float(txn["balance_after"]),
+        "created_at": txn["created_at"],
     }
 
 
 @app.get("/transactions/{account_id}")
 def transaction_history(
     account_id: int,
-    limit:  int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     user=Depends(get_current_user),
 ):
@@ -214,9 +228,7 @@ def transaction_history(
         conn = get_conn()
         cur = conn.cursor()
 
-        # Ownership check
-        cur.execute("SELECT user_id FROM accounts WHERE id = %s",
-                    (account_id,))
+        cur.execute("SELECT user_id FROM accounts WHERE id = %s", (account_id,))
         acc = cur.fetchone()
         if not acc:
             raise HTTPException(status_code=404, detail="Account not found")
@@ -226,19 +238,17 @@ def transaction_history(
         cur.execute(
             """
             SELECT id, type, amount, balance_after, description, reference_id, created_at
-            FROM transactions
-            WHERE account_id = %s
-            ORDER BY created_at DESC
-            LIMIT %s OFFSET %s
+            FROM transactions WHERE account_id = %s
+            ORDER BY created_at DESC LIMIT %s OFFSET %s
             """,
             (account_id, limit, offset),
         )
         rows = cur.fetchall()
-
         cur.execute(
-            "SELECT COUNT(*) as total FROM transactions WHERE account_id = %s", (account_id,))
+            "SELECT COUNT(*) as total FROM transactions WHERE account_id = %s",
+            (account_id,),
+        )
         total = cur.fetchone()["total"]
-
         cur.close()
         conn.close()
     except HTTPException:
@@ -249,18 +259,18 @@ def transaction_history(
 
     return {
         "account_id": account_id,
-        "total":      total,
-        "limit":      limit,
-        "offset":     offset,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
         "transactions": [
             {
-                "id":           r["id"],
-                "type":         r["type"],
-                "amount":       float(r["amount"]),
+                "id": r["id"],
+                "type": r["type"],
+                "amount": float(r["amount"]),
                 "balance_after": float(r["balance_after"]),
-                "description":  r["description"],
+                "description": r["description"],
                 "reference_id": str(r["reference_id"]),
-                "created_at":   r["created_at"],
+                "created_at": r["created_at"],
             }
             for r in rows
         ],
