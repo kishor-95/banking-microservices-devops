@@ -28,7 +28,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: transaction-service
-          image: docker.io/kishor95/transaction-service:20ff9eb-5 # ← fill in your image: e.g. your-registry/auth-service:1.0.0
+          image: docker.io/kishor95/transaction-service:v2 # ← fill in your image: e.g. your-registry/auth-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8004

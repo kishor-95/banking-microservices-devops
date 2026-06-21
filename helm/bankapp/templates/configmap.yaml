@@ -1,0 +1,50 @@
+{{- /*
+bankapp-config — application-level environment variables
+*/ -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bankapp-config
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app.kubernetes.io/part-of: bankapp
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+data:
+  DB_HOST: {{ .Values.configmaps.appConfig.DB_HOST | quote }}
+  DB_PORT: {{ .Values.configmaps.appConfig.DB_PORT | quote }}
+  JWT_EXPIRE_HOURS: {{ .Values.configmaps.appConfig.JWT_EXPIRE_HOURS | quote }}
+---
+{{- /*
+db-init-script — SQL schema init script
+*/ -}}
+{{- if .Values.configmaps.dbInit.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-init-script
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app.kubernetes.io/part-of: bankapp
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+data:
+  init.sql: |
+{{ .Values.configmaps.dbInit.initSql | indent 4 }}
+{{- end }}
+---
+{{- /*
+nginx-config — Nginx reverse-proxy configuration
+*/ -}}
+{{- if .Values.configmaps.nginx.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: frontend
+    app.kubernetes.io/part-of: bankapp
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+data:
+  nginx.conf: |
+{{ .Values.configmaps.nginx.nginxConf | indent 4 }}
+{{- end }}

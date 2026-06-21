@@ -1,0 +1,88 @@
+# prometheusrule-bankapp.yaml
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: bankapp-alerts
+  namespace: bankapp
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: bankapp.availability
+      interval: 30s
+      rules:
+        - alert: BankAppServiceDown
+          expr: up{namespace="bankapp"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Service {{ $labels.job }} is down"
+            description: "{{ $labels.job }} has been down for >1 minute."
+
+        - alert: BankAppHighErrorRate
+          expr: |
+            (
+              sum(rate(auth_http_requests_total{status_code=~"5..",namespace="bankapp"}[5m]))
+              + sum(rate(account_http_requests_total{status_code=~"5..",namespace="bankapp"}[5m]))
+              + sum(rate(balance_http_requests_total{status_code=~"5..",namespace="bankapp"}[5m]))
+              + sum(rate(transaction_http_requests_total{status_code=~"5..",namespace="bankapp"}[5m]))
+            )
+            /
+            (
+              sum(rate(auth_http_requests_total{namespace="bankapp"}[5m]))
+              + sum(rate(account_http_requests_total{namespace="bankapp"}[5m]))
+              + sum(rate(balance_http_requests_total{namespace="bankapp"}[5m]))
+              + sum(rate(transaction_http_requests_total{namespace="bankapp"}[5m]))
+            ) > 0.05
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "BankApp 5xx error rate above 5%"
+            description: "Combined error rate across backend services exceeded 5% for 2 minutes."
+
+        - alert: BankAppHighLoginFailureRate
+          expr: |
+            rate(auth_login_attempts_total{status=~"invalid_credentials|account_disabled",namespace="bankapp"}[5m]) > 5
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Elevated login failure rate"
+            description: "Could indicate brute-force attempt or broken client. Check auth-service logs."
+
+        - alert: BankAppHighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(auth_http_request_duration_seconds_bucket{namespace="bankapp"}[5m])) by (le)
+              or
+              sum(rate(account_http_request_duration_seconds_bucket{namespace="bankapp"}[5m])) by (le)
+              or
+              sum(rate(balance_http_request_duration_seconds_bucket{namespace="bankapp"}[5m])) by (le)
+              or
+              sum(rate(transaction_http_request_duration_seconds_bucket{namespace="bankapp"}[5m])) by (le)
+            ) > 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "P95 latency exceeds 1s"
+
+        - alert: BankAppPodRestarting
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="bankapp"}[15m]) > 3
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.pod }} restarting frequently"
+
+        - alert: BankAppDBConnectionErrors
+          expr: |
+            increase(auth_db_connection_errors_total{namespace="bankapp"}[5m]) > 0
+          labels:
+            severity: critical
+          annotations:
+            summary: "auth-service DB connection errors detected"
+            description: "Check RDS connectivity, security groups, or connection pool exhaustion."
