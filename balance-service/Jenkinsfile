@@ -1,0 +1,14 @@
+@Library('vaultx-shared-lib@main') _
+
+pythonMicroservicePipeline(
+    serviceName         : 'balance-service',
+    serviceDir          : 'balance-service',
+    containerName       : 'balance-service',
+    deploymentFile      : 'kubernetes/balance-service/balance-service-deployment.yaml',
+    coverageThreshold   : 80,
+    gitCredentialsId    : 'git-creds',
+    dockerCredentialsId : 'docker-creds',
+    namespace           : 'kishor95',
+    serviceType         : 'python',  
+    gitOpsRepo          : 'https://github.com/kishor-95/banking-microservices-devops.git'
+)

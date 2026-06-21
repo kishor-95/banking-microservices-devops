@@ -1,0 +1,18 @@
+# ── auth-service/service.yaml ────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: bankapp-balance-service
+  namespace: bankapp
+  labels:
+    app.kubernetes.io/part-of: bankapp
+    app: balance-service
+spec:
+  selector:
+    app: balance-service
+  ports:
+  - name: balance-service-port
+    protocol: TCP
+    port: 8003
+    targetPort: 8003
+  type: ClusterIP
