@@ -338,7 +338,7 @@ kubectl get nodes      # should show 2 nodes Ready
 ---
 
 ## Kubernetes Deployment
-
+Before applying the kubernetes stacks we need to update out database endpoint in configmap and DB_USER, DB_PASSWORD, and DB_NAME in scerts in encrypeted 
 Apply in this order:
 
 ```bash

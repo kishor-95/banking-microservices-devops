@@ -1,36 +1,42 @@
+# docker-compose.yml
 version: "3.9"
 
-# Shared env block injected into every backend service
 x-backend-env: &backend-env
   DB_HOST:     ${DB_HOST}
-  DB_PORT:     ${DB_PORT:-5432}
+  DB_PORT:     ${DB_PORT}
   DB_NAME:     ${DB_NAME}
   DB_USER:     ${DB_USER}
   DB_PASSWORD: ${DB_PASSWORD}
   JWT_SECRET:  ${JWT_SECRET}
 
+x-proxy-headers: &proxy-headers
+  proxy_set_header: "Host $host"
+
 services:
 
-  # ── PostgreSQL ───────────────────────────────────────────────────────────────
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB:       ${DB_NAME}
-      POSTGRES_USER:     ${DB_USER}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER} 
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - pg_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    # Uncomment to connect with psql from host during debugging:
+    # ports:
+    #   - "5432:5432"
     networks:
       - bank-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bankapp"]
       interval: 5s
       timeout: 5s
       retries: 10
 
-  # ── Prometheus ───────────────────────────────────────────────────────────────
+    # ── Prometheus ───────────────────────────────────────────────────────────────
   prometheus:
     image: prom/prometheus:v2.52.0
     restart: unless-stopped
@@ -73,17 +79,21 @@ services:
 
   # ── auth-service ─────────────────────────────────────────────────────────────
   auth-service:
-    build:
-      context: .                          # root — gives access to common/
-      dockerfile: auth-service/Dockerfile
+    build: ./auth-service
+    # image: kishor95/bankapp-auth-service:latest
     restart: unless-stopped
-    environment: *backend-env
-    expose: ["8001"]
-    networks: [bank-network]
+    environment:
+      <<: *backend-env
+    # Not exposed to host — reachable only via Nginx inside bank-network
+    expose:
+      - "8001"
+    networks:
+      - bank-network
     depends_on:
-      postgres: {condition: service_healthy}
+      postgres:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8001/auth/health || exit 1"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/auth/health')\""]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -91,17 +101,20 @@ services:
 
   # ── account-service ──────────────────────────────────────────────────────────
   account-service:
-    build:
-      context: .
-      dockerfile: account-service/Dockerfile
+    build: ./account-service
+    # image: kishor95/bankapp-account-service:latest
     restart: unless-stopped
-    environment: *backend-env
-    expose: ["8002"]
-    networks: [bank-network]
+    environment:
+      <<: *backend-env
+    expose:
+      - "8002"
+    networks:
+      - bank-network
     depends_on:
-      postgres: {condition: service_healthy}
+      postgres:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8002/accounts/health || exit 1"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8002/accounts/health')\""]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -109,17 +122,20 @@ services:
 
   # ── balance-service ───────────────────────────────────────────────────────────
   balance-service:
-    build:
-      context: .
-      dockerfile: balance-service/Dockerfile
+    build: ./balance-service
+    # image: kishor95/bankapp-balance-service:latest
     restart: unless-stopped
-    environment: *backend-env
-    expose: ["8003"]
-    networks: [bank-network]
+    environment:
+      <<: *backend-env
+    expose:
+      - "8003"
+    networks:
+      - bank-network
     depends_on:
-      postgres: {condition: service_healthy}
+      postgres:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8003/balance/health || exit 1"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8003/balance/health')\""]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -127,35 +143,45 @@ services:
 
   # ── transaction-service ───────────────────────────────────────────────────────
   transaction-service:
-    build:
-      context: .
-      dockerfile: transaction-service/Dockerfile
+    build: ./transaction-service
+    # image: kishor95/bankapp-transaction-service:latest
     restart: unless-stopped
-    environment: *backend-env
-    expose: ["8004"]
-    networks: [bank-network]
+    environment:
+      <<: *backend-env
+    expose:
+      - "8004"
+    networks:
+      - bank-network
     depends_on:
-      postgres: {condition: service_healthy}
+      postgres:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8004/transactions/health || exit 1"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8004/transactions/health')\""]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 15s
 
-  # ── frontend ──────────────────────────────────────────────────────────────────
+  # ── frontend (Nginx) ──────────────────────────────────────────────────────────
   frontend:
     build: ./frontend
+    # image: kishor95/bankapp-frontend:latest  
     restart: unless-stopped
-    ports: ["80:80"]
-    networks: [bank-network]
+    ports:
+      - "80:80"      # Only port exposed to the host
+    networks:
+      - bank-network
     volumes:
       - ./frontend/nginx.conf:/etc/nginx/nginx.conf
     depends_on:
-      auth-service:        {condition: service_healthy}
-      account-service:     {condition: service_healthy}
-      balance-service:     {condition: service_healthy}
-      transaction-service: {condition: service_healthy}
+      auth-service:
+        condition: service_healthy
+      account-service:
+        condition: service_healthy
+      balance-service:
+        condition: service_healthy
+      transaction-service:
+        condition: service_healthy
 
 volumes:
   pg_data:
@@ -164,4 +190,6 @@ volumes:
 
 networks:
   bank-network:
+    name: bank-network
     driver: bridge
+
