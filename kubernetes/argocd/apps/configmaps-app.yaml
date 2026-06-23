@@ -1,0 +1,33 @@
+# argocd/apps/configmaps-app.yaml
+# Synced SECOND — services need ConfigMaps mounted before they start.
+# Wave 0 runs after namespace (wave -1) but before services (wave 1+).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bankapp-configmaps
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/part-of: bankapp
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: bankapp
+
+  source:
+    repoURL: https://github.com/kishor-95/banking-microservices-devops.git
+    targetRevision: main
+    path: kubernetes/configmaps
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: bankapp
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      - ApplyOutOfSyncOnly=true
