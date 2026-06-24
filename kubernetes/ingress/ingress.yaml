@@ -14,7 +14,18 @@ metadata:
 spec:
   ingressClassName: alb        # ✅ correct way
   rules:
-  - http:
+  - host: techpluse.online
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: bankapp-frontend-service
+            port:
+              number: 80
+  - host: www.techpluse.online
+    http:
       paths:
       - path: /
         pathType: Prefix
