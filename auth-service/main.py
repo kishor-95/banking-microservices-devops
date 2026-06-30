@@ -230,7 +230,7 @@ def login(body: LoginRequest):
     return TokenResponse(access_token=token, user_id=user["id"], username=user["username"])
 
 
-@app.get("/auth/verify")
+@app.get("/auth/verify", responses={403: {"description": "Not authenticated"}})
 def verify(credentials: HTTPAuthorizationCredentials = Security(security)):
     if credentials is None:
         raise HTTPException(status_code=403, detail="Not authenticated")
