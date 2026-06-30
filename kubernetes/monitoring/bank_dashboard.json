@@ -1,0 +1,240 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "Request Rate by Service",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "targets": [
+        { "expr": "sum(rate(auth_http_requests_total[5m]))", "legendFormat": "auth-service", "refId": "A" },
+        { "expr": "sum(rate(account_http_requests_total[5m]))", "legendFormat": "account-service", "refId": "B" },
+        { "expr": "sum(rate(balance_http_requests_total[5m]))", "legendFormat": "balance-service", "refId": "C" },
+        { "expr": "sum(rate(transaction_http_requests_total[5m]))", "legendFormat": "transaction-service", "refId": "D" }
+      ]
+    },
+    {
+      "title": "5xx Error Rate by Service",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "targets": [
+        { "expr": "sum(rate(auth_http_requests_total{status_code=~\"5..\"}[5m]))", "legendFormat": "auth-service", "refId": "A" },
+        { "expr": "sum(rate(account_http_requests_total{status_code=~\"5..\"}[5m]))", "legendFormat": "account-service", "refId": "B" },
+        { "expr": "sum(rate(balance_http_requests_total{status_code=~\"5..\"}[5m]))", "legendFormat": "balance-service", "refId": "C" },
+        { "expr": "sum(rate(transaction_http_requests_total{status_code=~\"5..\"}[5m]))", "legendFormat": "transaction-service", "refId": "D" }
+      ]
+    },
+    {
+      "title": "P95 Latency by Service",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": { "unit": "s", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(auth_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "auth-service", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum(rate(account_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "account-service", "refId": "B" },
+        { "expr": "histogram_quantile(0.95, sum(rate(balance_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "balance-service", "refId": "C" },
+        { "expr": "histogram_quantile(0.95, sum(rate(transaction_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "transaction-service", "refId": "D" }
+      ]
+    },
+    {
+      "title": "Requests In Progress",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "targets": [
+        { "expr": "sum(auth_http_requests_in_progress)", "legendFormat": "auth-service", "refId": "A" },
+        { "expr": "sum(account_http_requests_in_progress)", "legendFormat": "account-service", "refId": "B" },
+        { "expr": "sum(balance_http_requests_in_progress)", "legendFormat": "balance-service", "refId": "C" },
+        { "expr": "sum(transaction_http_requests_in_progress)", "legendFormat": "transaction-service", "refId": "D" }
+      ]
+    },
+    {
+      "title": "Login Attempts by Status",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15, "stacking": { "mode": "normal" } } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "invalid_credentials" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] },
+          { "matcher": { "id": "byName", "options": "success" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] }
+        ]
+      },
+      "targets": [
+        { "expr": "sum(rate(auth_login_attempts_total[5m])) by (status)", "legendFormat": "{{status}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Registrations by Status",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15, "stacking": { "mode": "normal" } } },
+        "overrides": []
+      },
+      "targets": [
+        { "expr": "sum(rate(auth_registrations_total[5m])) by (status)", "legendFormat": "{{status}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Accounts Created by Type",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": { "unit": "ops", "custom": { "drawStyle": "bars", "fillOpacity": 60 } },
+        "overrides": []
+      },
+      "targets": [
+        { "expr": "sum(rate(account_accounts_created_total[5m])) by (account_type)", "legendFormat": "{{account_type}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Account Operations by Outcome",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "targets": [
+        { "expr": "sum(rate(account_operations_total[5m])) by (operation, status)", "legendFormat": "{{operation}} - {{status}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Balance Queries by Outcome",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "access_denied" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }
+        ]
+      },
+      "targets": [
+        { "expr": "sum(rate(balance_queries_total[5m])) by (status)", "legendFormat": "{{status}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Transaction Volume (USD/sec) by Type",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": { "unit": "currencyUSD", "custom": { "drawStyle": "bars", "fillOpacity": 60 } },
+        "overrides": []
+      },
+      "targets": [
+        { "expr": "sum(rate(transaction_volume_usd_total[5m])) by (type)", "legendFormat": "{{type}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Transactions Processed by Type/Status",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "targets": [
+        { "expr": "sum(rate(transaction_processed_total[5m])) by (type, status)", "legendFormat": "{{type}} - {{status}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Transaction Errors by Type",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 40 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": { "unit": "ops", "custom": { "drawStyle": "bars", "fillOpacity": 60 } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "insufficient_funds" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }] },
+          { "matcher": { "id": "byName", "options": "db_error" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }
+        ]
+      },
+      "targets": [
+        { "expr": "sum(rate(transaction_errors_total[5m])) by (error_type)", "legendFormat": "{{error_type}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "DB Connection Errors (All Services)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 48 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "drawStyle": "bars", "fillOpacity": 60 } },
+        "overrides": []
+      },
+      "targets": [
+        { "expr": "increase(auth_db_connection_errors_total[5m])", "legendFormat": "auth-service", "refId": "A" },
+        { "expr": "increase(account_db_connection_errors_total[5m])", "legendFormat": "account-service", "refId": "B" },
+        { "expr": "increase(balance_db_connection_errors_total[5m])", "legendFormat": "balance-service", "refId": "C" },
+        { "expr": "increase(transaction_db_connection_errors_total[5m])", "legendFormat": "transaction-service", "refId": "D" }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["bankapp"],
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": false, "text": "Prometheus", "value": "prometheus" },
+        "hide": 0,
+        "label": "Datasource",
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "BankApp — Service Metrics",
+  "uid": "bankapp-service-metrics",
+  "version": 1,
+  "weekStart": ""
+}

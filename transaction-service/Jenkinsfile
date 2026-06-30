@@ -9,5 +9,6 @@ pythonMicroservicePipeline(
     gitCredentialsId    : 'git-creds',
     dockerCredentialsId : 'docker-creds',
     namespace           : 'kishor95',
+    serviceType         : 'python',  
     gitOpsRepo          : 'https://github.com/kishor-95/banking-microservices-devops.git'
 )

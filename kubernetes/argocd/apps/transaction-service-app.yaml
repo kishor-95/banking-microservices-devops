@@ -1,0 +1,44 @@
+# argocd/apps/transaction-service-app.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bankapp-transaction-service
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/part-of: bankapp
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: bankapp
+
+  source:
+    repoURL: https://github.com/kishor-95/banking-microservices-devops.git
+    targetRevision: main
+    path: kubernetes/transaction-service
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: bankapp
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas

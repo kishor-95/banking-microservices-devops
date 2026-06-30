@@ -1,0 +1,46 @@
+# argocd/project.yaml
+# APPLY FIRST — Application manifests reference this project by name.
+# ArgoCD rejects an Application if its project doesn't exist yet.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: bankapp
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: VaultX Banking Platform
+
+  # Only sync from your repo — nothing else
+  sourceRepos:
+    - https://github.com/kishor-95/banking-microservices-devops.git
+
+  # Allowed destination namespaces
+  destinations:
+    - namespace: bankapp
+      server: https://kubernetes.default.svc
+    - namespace: monitoring       # for ServiceMonitors & PrometheusRules
+      server: https://kubernetes.default.svc
+    - namespace: argocd           # for app-of-apps child apps
+      server: https://kubernetes.default.svc
+
+  # Only allow Namespace at cluster level — nothing else
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+
+  # Allow all namespace-scoped resources EXCEPT Secret
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+
+  # 🔒 HARD BLOCK — ArgoCD refuses to sync Secret kind
+  # even if secrets.yaml is accidentally committed to Git
+  namespaceResourceBlacklist:
+    - group: ""
+      kind: Secret
+
+  # Warn in ArgoCD UI if a resource exists in namespace
+  # but isn't tracked by any Application
+  orphanedResources:
+    warn: true

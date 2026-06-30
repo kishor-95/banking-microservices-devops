@@ -1,0 +1,33 @@
+# argocd/app-of-apps.yaml
+# Root application — watches argocd/apps/ folder and automatically
+# creates/updates/deletes child Applications when you push changes to Git.
+# This is the ONLY manifest you ever apply manually after initial bootstrap.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bankapp-root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/name: bankapp-root
+    app.kubernetes.io/part-of: bankapp
+spec:
+  project: bankapp
+
+  source:
+    repoURL: https://github.com/kishor-95/banking-microservices-devops.git
+    targetRevision: main
+    path: kubernetes/argocd/apps    # ← watches all child app manifests
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd               # child Applications live in argocd namespace
+
+  syncPolicy:
+    automated:
+      prune: true       # deletes child app if you remove its yaml from Git
+      selfHeal: true    # reverts manual changes to child apps
+    syncOptions:
+      - CreateNamespace=false       # argocd namespace already exists
+      - ApplyOutOfSyncOnly=true

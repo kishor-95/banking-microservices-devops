@@ -11,12 +11,19 @@ import os
 import logging
 import string
 import secrets
+import time
 
 
 import psycopg2
 import psycopg2.extras
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request, Security
 from fastapi.middleware.cors import CORSMiddleware
+
+from metrics import (
+    REQUEST_COUNT, REQUEST_LATENCY, REQUESTS_IN_PROGRESS,
+    record_account_created, record_account_closed, record_account_operation,
+    metrics_endpoint
+)
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 from pydantic import BaseModel
@@ -38,7 +45,42 @@ JWT_ALGO = "HS256"
 app = FastAPI(title="BankApp · Account Service", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=[
                    "*"], allow_methods=["*"], allow_headers=["*"])
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
+
+# ── Metrics Middleware ─────────────────────────────────────────────────────────
+
+
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    """Track request metrics"""
+    if request.url.path == "/metrics":
+        return await call_next(request)
+
+    method = request.method
+    path = request.url.path
+    REQUESTS_IN_PROGRESS.labels(method=method, endpoint=path).inc()
+
+    start_time = time.time()
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+    except Exception:
+        status_code = 500
+        raise
+    finally:
+        duration = time.time() - start_time
+        REQUEST_LATENCY.labels(method=method, endpoint=path).observe(duration)
+        REQUEST_COUNT.labels(method=method, endpoint=path, status_code=status_code).inc()
+        REQUESTS_IN_PROGRESS.labels(method=method, endpoint=path).dec()
+
+    return response
+
+
+# ── Metrics Endpoint ───────────────────────────────────────────────────────────
+@app.get("/metrics")
+async def get_metrics():
+    """Prometheus metrics endpoint"""
+    return await metrics_endpoint()
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -51,8 +93,9 @@ def get_conn():
     )
 
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
-    """Validate JWT locally — no network hop to auth-service for hot paths."""
+def get_current_user(credentials: HTTPAuthorizationCredentials = Security(security)) -> dict:
+    if credentials is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     try:
         payload = jwt.decode(credentials.credentials,
                              JWT_SECRET, algorithms=[JWT_ALGO])
@@ -153,9 +196,12 @@ def open_account(body: OpenAccountRequest, user=Depends(get_current_user)):
         cur.close()
         conn.close()
     except Exception as exc:
+        record_account_operation('create', 'failure')
         log.error("open_account error: %s", exc)
         raise HTTPException(status_code=500, detail=DB_ERROR)
 
+    record_account_created(body.account_type)
+    record_account_operation('create', 'success')
     log.info("Account opened: %s for user %s", acc_number, user["username"])
     return dict(account)
 
@@ -216,6 +262,8 @@ def close_account(account_id: int, user=Depends(get_current_user)):
         conn.commit()
         cur.close()
         conn.close()
+        record_account_closed()
+        record_account_operation('close', 'success')
 
     except HTTPException:
         if conn:
@@ -224,6 +272,7 @@ def close_account(account_id: int, user=Depends(get_current_user)):
     except Exception as exc:
         if conn:
             conn.rollback()
+        record_account_operation('close', 'failure')
         log.error("close_account error: %s", exc)
         raise HTTPException(status_code=500, detail="Database error")
 

@@ -6,6 +6,7 @@ metadata:
   namespace: bankapp
   labels:
     app.kubernetes.io/part-of: bankapp
+    app: auth-service
 spec:
   selector:
     app: auth-service

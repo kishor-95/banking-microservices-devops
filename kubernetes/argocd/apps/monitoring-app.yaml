@@ -1,0 +1,33 @@
+# argocd/apps/monitoring-app.yaml
+# Deploys to monitoring namespace (ServiceMonitors, PrometheusRules, NetworkPolicies)
+# Wave 5 — last to sync, depends on all services being up
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bankapp-monitoring
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/part-of: bankapp
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  project: bankapp
+
+  source:
+    repoURL: https://github.com/kishor-95/banking-microservices-devops.git
+    targetRevision: main
+    path: kubernetes/monitoring
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring           # ← monitoring namespace, not bankapp
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true        # create monitoring namespace if it doesn't exist
+      - ApplyOutOfSyncOnly=true

@@ -1,0 +1,32 @@
+# argocd/apps/ingress-app.yaml
+# Ingress syncs last — services must exist before ingress routes to them
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bankapp-ingress
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/part-of: bankapp
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: bankapp
+
+  source:
+    repoURL: https://github.com/kishor-95/banking-microservices-devops.git
+    targetRevision: main
+    path: kubernetes/ingress
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: bankapp
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      - ApplyOutOfSyncOnly=true
