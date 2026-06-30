@@ -7,5 +7,5 @@ metadata:
     app.kubernetes.io/part-of: bankapp
 data:
   DB_PORT: "5432"
-  DB_HOST: "bankapp-dev-postgres.<CLUSTER_NAME>.ap-south-1.rds.amazonaws.com" ## Change this to your RDS endpoint
+  DB_HOST: "bankapp-dev-postgres.cjae4i0yosku.ap-south-1.rds.amazonaws.com" ## Change this to your RDS endpoint
   JWT_EXPIRE_HOURS: "24"
