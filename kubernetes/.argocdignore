@@ -4,7 +4,7 @@
 
 # Secrets — managed manually via bootstrap script, never by ArgoCD
 secrets/
-
+ingress
 # ArgoCD own manifests — managed by root app-of-apps, not self-synced
 argocd/
 
