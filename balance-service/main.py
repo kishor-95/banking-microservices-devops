@@ -4,7 +4,7 @@ import time
 
 import psycopg2
 import psycopg2.extras
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends, Request, security
 from fastapi.middleware.cors import CORSMiddleware
 
 from metrics import (
@@ -30,7 +30,7 @@ JWT_ALGO = "HS256"
 app = FastAPI(title="BankApp · Balance Service", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=[
                    "*"], allow_methods=["*"], allow_headers=["*"])
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 # ── Metrics Middleware ─────────────────────────────────────────────────────────
 
@@ -78,7 +78,9 @@ def get_conn():
     )
 
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+def get_current_user(credentials: HTTPAuthorizationCredentials = Security(security)) -> dict:
+    if credentials is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     try:
         payload = jwt.decode(credentials.credentials,
                              JWT_SECRET, algorithms=[JWT_ALGO])
@@ -87,7 +89,6 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
-
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 @app.get("/balance/health")

@@ -15,7 +15,7 @@ import bcrypt
 import jwt
 import psycopg2
 import psycopg2.extras
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends, Request, Security  
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr, field_validator
@@ -52,7 +52,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)  # allow None for /auth/verify, /auth/health
 
 # ── Metrics Middleware ─────────────────────────────────────────────────────────
 
@@ -231,7 +231,7 @@ def login(body: LoginRequest):
 
 
 @app.get("/auth/verify")
-def verify(credentials: HTTPAuthorizationCredentials = Depends(security)):
+def verify(credentials: HTTPAuthorizationCredentials = Security(security)):
     """
     Called by other microservices to validate a Bearer token.
     Returns the decoded claims so the calling service can use user_id.

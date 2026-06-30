@@ -31,9 +31,11 @@ class TestTransactionMetrics:
 
     def test_record_transaction_insufficient_funds(self):
         """Test insufficient funds transaction metric"""
-        before = TRANSACTIONS_PROCESSED.labels(type='WITHDRAW', status='insufficient_funds')._value.get()
+        before = TRANSACTIONS_PROCESSED.labels(
+            type='WITHDRAW', status='insufficient_funds')._value.get()
         record_transaction('WITHDRAW', 'insufficient_funds', 500.00)
-        after = TRANSACTIONS_PROCESSED.labels(type='WITHDRAW', status='insufficient_funds')._value.get()
+        after = TRANSACTIONS_PROCESSED.labels(
+            type='WITHDRAW', status='insufficient_funds')._value.get()
         assert after == before + 1
 
     def test_record_transaction_volume_deposit(self):
