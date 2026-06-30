@@ -15,7 +15,7 @@ import bcrypt
 import jwt
 import psycopg2
 import psycopg2.extras
-from fastapi import FastAPI, HTTPException, Request, Security  
+from fastapi import FastAPI, HTTPException, Request, Security
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr, field_validator
@@ -232,10 +232,6 @@ def login(body: LoginRequest):
 
 @app.get("/auth/verify")
 def verify(credentials: HTTPAuthorizationCredentials = Security(security)):
-    """
-    Called by other microservices to validate a Bearer token.
-    Returns the decoded claims so the calling service can use user_id.
-    """
+    if credentials is None:
+        raise HTTPException(status_code=403, detail="Not authenticated")
     payload = decode_jwt(credentials.credentials)
-    record_token_operation('verify', 'success')
-    return {"valid": True, "user_id": payload["sub"], "username": payload["username"]}
