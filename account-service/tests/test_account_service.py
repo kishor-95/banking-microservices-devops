@@ -123,11 +123,11 @@ class TestGetProfile:
         resp = client.get("/accounts/profile")
         assert resp.status_code == 500
 
-    def test_profile_no_auth_returns_401(self):
-        """No Authorization header → 401."""
-        app.dependency_overrides.clear()  # remove the fake auth for this test
+    def test_profile_no_auth_returns_403(self):
+        """No Authorization header → 403 (FastAPI HTTPBearer default)."""
+        app.dependency_overrides.clear()
         resp = client.get("/accounts/profile")
-        assert resp.status_code == 401
+        assert resp.status_code == 403
         app.dependency_overrides[get_current_user] = lambda: FAKE_USER
 
 
