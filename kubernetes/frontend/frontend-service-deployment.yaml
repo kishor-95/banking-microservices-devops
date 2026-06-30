@@ -26,7 +26,7 @@ spec:
           configMap:
             name: nginx-config
       containers:
-        - image: docker.io/kishor95/bankapp-frontend:17acf00-39
+        - image: docker.io/kishor95/bankapp-frontend:fcbba3a-7
           imagePullPolicy: IfNotPresent
           name: bankapp-frontend
           ports:
