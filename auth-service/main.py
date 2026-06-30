@@ -15,7 +15,7 @@ import bcrypt
 import jwt
 import psycopg2
 import psycopg2.extras
-from fastapi import FastAPI, HTTPException, Depends, Request, Security  
+from fastapi import FastAPI, HTTPException, Request, Security  
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr, field_validator
