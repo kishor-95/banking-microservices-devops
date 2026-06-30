@@ -1,11 +1,17 @@
 import os
 import logging
+import time
 from typing import Optional
 
 import psycopg2
 import psycopg2.extras
-from fastapi import FastAPI, HTTPException, Depends, Query
+from fastapi import FastAPI, HTTPException, Depends, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+
+from metrics import (
+    REQUEST_COUNT, REQUEST_LATENCY, REQUESTS_IN_PROGRESS,
+    record_transaction, record_transaction_error, metrics_endpoint
+)
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 from pydantic import BaseModel, field_validator
@@ -27,6 +33,41 @@ app = FastAPI(title="BankApp · Transaction Service", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=[
                    "*"], allow_methods=["*"], allow_headers=["*"])
 security = HTTPBearer()
+
+# ── Metrics Middleware ─────────────────────────────────────────────────────────
+
+
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    """Track request metrics"""
+    if request.url.path == "/metrics":
+        return await call_next(request)
+
+    method = request.method
+    path = request.url.path
+    REQUESTS_IN_PROGRESS.labels(method=method, endpoint=path).inc()
+
+    start_time = time.time()
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+    except Exception:
+        status_code = 500
+        raise
+    finally:
+        duration = time.time() - start_time
+        REQUEST_LATENCY.labels(method=method, endpoint=path).observe(duration)
+        REQUEST_COUNT.labels(method=method, endpoint=path, status_code=status_code).inc()
+        REQUESTS_IN_PROGRESS.labels(method=method, endpoint=path).dec()
+
+    return response
+
+
+# ── Metrics Endpoint ───────────────────────────────────────────────────────────
+@app.get("/metrics")
+async def get_metrics():
+    """Prometheus metrics endpoint"""
+    return await metrics_endpoint()
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -127,13 +168,17 @@ def deposit(body: TransactionRequest, user=Depends(get_current_user)):
         conn.commit()
         log.info("Deposit $%.2f → account %d (balance now $%.2f)",
                  body.amount, body.account_id, new_balance)
+        record_transaction('DEPOSIT', 'success', body.amount)
 
-    except HTTPException:
+    except HTTPException as e:
         conn.rollback()
+        if e.status_code == 403:
+            record_transaction_error('account_inactive')
         raise
     except Exception as exc:
         conn.rollback()
         log.error("deposit error: %s", exc)
+        record_transaction_error('db_error')
         raise HTTPException(status_code=500, detail="Database error")
     finally:
         conn.close()
@@ -182,13 +227,19 @@ def withdraw(body: TransactionRequest, user=Depends(get_current_user)):
         conn.commit()
         log.info("Withdraw $%.2f ← account %d (balance now $%.2f)",
                  body.amount, body.account_id, new_balance)
+        record_transaction('WITHDRAW', 'success', body.amount)
 
-    except HTTPException:
+    except HTTPException as e:
         conn.rollback()
+        if e.status_code == 422:
+            record_transaction_error('insufficient_funds')
+        elif e.status_code == 403:
+            record_transaction_error('account_inactive')
         raise
     except Exception as exc:
         conn.rollback()
         log.error("withdraw error: %s", exc)
+        record_transaction_error('db_error')
         raise HTTPException(status_code=500, detail="Database error")
     finally:
         conn.close()

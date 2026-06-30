@@ -1,0 +1,20 @@
+# servicemonitor-account.yaml
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: bankapp-account-service-monitor
+  namespace: bankapp
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: account-service
+  namespaceSelector:
+    matchNames:
+      - bankapp
+  endpoints:
+    - port: account-service-port
+      path: /metrics
+      interval: 30s

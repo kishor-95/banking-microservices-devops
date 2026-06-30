@@ -1,0 +1,41 @@
+# argocd/apps/hpa-app.yaml
+# HPA must sync AFTER deployments exist — otherwise HPA has nothing to scale.
+# Wave 4 ensures deployments (wave 2) are already running.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bankapp-hpa
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/part-of: bankapp
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: bankapp
+
+  source:
+    repoURL: https://github.com/kishor-95/banking-microservices-devops.git
+    targetRevision: main
+    path: kubernetes/hpa
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: bankapp
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      - ApplyOutOfSyncOnly=true
+
+  # HPA updates currentReplicas/desiredReplicas constantly —
+  # ignore these status fields to prevent false drift detection
+  ignoreDifferences:
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+      jsonPointers:
+        - /status
