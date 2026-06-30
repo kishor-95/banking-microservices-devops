@@ -90,6 +90,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Security(securi
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+
 # ── Routes ────────────────────────────────────────────────────────────────────
 @app.get("/balance/health")
 def health():
