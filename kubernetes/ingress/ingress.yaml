@@ -8,13 +8,13 @@ metadata:
     alb.ingress.kubernetes.io/target-type: ip
     #alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-south-1:<ACCOUNT_ID>:certificate/ID  
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-south-1:151498474184:certificate/0db0fafc-0336-40d4-be7f-8ebb9186625d 
     alb.ingress.kubernetes.io/ssl-redirect: "443"
     alb.ingress.kubernetes.io/healthcheck-path: /health
 spec:
   ingressClassName: alb        # ✅ correct way
   rules:
-  - host: example.com   ## Change this to your domain name
+  - host: techpluse.online   ## Change this to your domain name
     http:
       paths:
       - path: /
@@ -24,7 +24,7 @@ spec:
             name: bankapp-frontend-service
             port:
               number: 80
-  - host: www.example.com  ## Change this to your domain name
+  - host: www.techpluse.online  ## Change this to your domain name
     http:
       paths:
       - path: /
