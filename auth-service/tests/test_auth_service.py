@@ -282,10 +282,10 @@ class TestVerify:
         assert resp.status_code == 401
         assert "expired" in resp.json()["detail"].lower()
 
-    def test_verify_no_auth_header_returns_401(self):
-        """No Authorization header → 401 (HTTPBearer requirement)."""
+    def test_verify_no_auth_header_returns_403(self):
+        """No Authorization header → 403 (HTTPBearer requirement)."""
         resp = client.get("/auth/verify")
-        assert resp.status_code == 401
+        assert resp.status_code == 403
 
     def test_verify_wrong_secret_returns_401(self):
         """Token signed with wrong secret → 401 Invalid token."""
