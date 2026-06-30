@@ -28,7 +28,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: balance-service
-          image: docker.io/kishor95/balance-service:f6fffe5-2 # ← fill in your image: e.g. your-registry/auth-service:1.0.0
+          image: docker.io/kishor95/balance-service:3ee2047-6 # ← fill in your image: e.g. your-registry/auth-service:1.0.0
           imagePullPolicy: Always
           ports:
             - containerPort: 8003
