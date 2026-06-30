@@ -1,0 +1,21 @@
+# servicemonitor-auth.yaml
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: bankapp-auth-service-monitor
+  namespace: bankapp
+  labels:
+    release: kube-prometheus-stack   # MUST match your Prometheus's serviceMonitorSelector label
+                                       # check with: kubectl get prometheus -n monitoring -o yaml | grep -A5 serviceMonitorSelector
+spec:
+  selector:
+    matchLabels:
+      app: auth-service
+  namespaceSelector:
+    matchNames:
+      - bankapp
+  endpoints:
+    - port: auth-service-port    # must match the `name:` field on the Service's port, not the containerPort number
+      path: /metrics
+      interval: 30s

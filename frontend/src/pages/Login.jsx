@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, parseApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { Shield } from "lucide-react";
 
 export default function Login() {
   const [mode,    setMode]    = useState("login"); // "login" | "register"
@@ -82,11 +83,11 @@ export default function Login() {
       <div style={styles.card}>
         {/* Logo */}
         <div style={styles.logo}>
-          <div style={styles.logoIcon}>⬡</div>
+          <Shield size={26} color="#6366f1" />
           <span style={styles.logoText}>VAULTX</span>
         </div>
         <p style={styles.tagline}>
-          {mode === "login" ? "Sign in to your account" : "Open your account"}
+          {mode === "login" ? "Secure access to your Vault" : "Open your account"}
         </p>
 
         {/* Tab switcher */}

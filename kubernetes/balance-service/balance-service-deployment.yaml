@@ -14,8 +14,8 @@ spec:
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxSurge:       1    # spin up 1 extra pod before terminating old ones
-      maxUnavailable: 0    # never take a pod down before a new one is ready
+      maxSurge: 1 # spin up 1 extra pod before terminating old ones
+      maxUnavailable: 0 # never take a pod down before a new one is ready
   selector:
     matchLabels:
       app: balance-service
@@ -26,14 +26,12 @@ spec:
     spec:
       # Graceful shutdown — let in-flight requests complete
       terminationGracePeriodSeconds: 30
-
       containers:
         - name: balance-service
-          image: kishor95/bankapp-balance-service:v1.0         # ← fill in your image: e.g. your-registry/auth-service:1.0.0
+          image: docker.io/kishor95/balance-service:v2 # ← fill in your image: e.g. your-registry/auth-service:1.0.0
           imagePullPolicy: Always
           ports:
-          - containerPort: 8003
-
+            - containerPort: 8003
           # ── Non-sensitive config from ConfigMap ───────────────────────────
           env:
             - name: DB_HOST
@@ -51,7 +49,6 @@ spec:
                 configMapKeyRef:
                   name: bankapp-config
                   key: JWT_EXPIRE_HOURS
-
             # ── Sensitive values from Secret ──────────────────────────────
             - name: DB_NAME
               valueFrom:
@@ -73,7 +70,6 @@ spec:
                 secretKeyRef:
                   name: bankapp-backend-secret
                   key: JWT_SECRET
-
           # ── Liveness probe — restart container if app is frozen ───────────
           livenessProbe:
             httpGet:
@@ -83,7 +79,6 @@ spec:
             periodSeconds: 15
             failureThreshold: 3
             timeoutSeconds: 5
-
           # ── Readiness probe ──────────
           readinessProbe:
             httpGet:
@@ -93,11 +88,10 @@ spec:
             periodSeconds: 5
             failureThreshold: 3
             timeoutSeconds: 3
-
           resources:
             requests:
-              cpu:    "100m"
+              cpu: "100m"
               memory: "128Mi"
             limits:
-              cpu:    "250m"
+              cpu: "250m"
               memory: "256Mi"

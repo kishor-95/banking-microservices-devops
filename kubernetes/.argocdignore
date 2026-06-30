@@ -1,0 +1,10 @@
+# .argocdignore
+# Place this file at: kubernetes/.argocdignore
+# ArgoCD will completely skip these paths during sync
+
+# Secrets — managed manually via bootstrap script, never by ArgoCD
+secrets/
+ingress
+# ArgoCD own manifests — managed by root app-of-apps, not self-synced
+argocd/
+
