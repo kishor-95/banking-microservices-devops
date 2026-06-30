@@ -234,4 +234,9 @@ def login(body: LoginRequest):
 def verify(credentials: HTTPAuthorizationCredentials = Security(security)):
     if credentials is None:
         raise HTTPException(status_code=403, detail="Not authenticated")
-    return decode_jwt(credentials.credentials)
+    payload = decode_jwt(credentials.credentials)
+    return {
+        "valid": True,
+        "user_id": payload["sub"],
+        "username": payload["username"]
+    }
