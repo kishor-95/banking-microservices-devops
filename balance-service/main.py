@@ -4,7 +4,7 @@ import time
 
 import psycopg2
 import psycopg2.extras
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends, Request, Security
 from fastapi.middleware.cors import CORSMiddleware
 
 from metrics import (
