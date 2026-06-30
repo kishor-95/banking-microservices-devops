@@ -5,7 +5,14 @@
  *   - Deposit / Withdraw form
  *   - Paginated transaction history
  */
-
+import { 
+  ArrowDown, 
+  ArrowUp, 
+  Landmark, 
+  Shield, 
+  ArrowDownLeft, 
+  ArrowUpRight 
+} from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, parseApiError } from "../api/client";
@@ -99,7 +106,7 @@ export default function Dashboard() {
 
       const newBalance = res.data.balance_after;
       setBalances((b) => ({ ...b, [selected]: newBalance }));
-      setTxnSuccess(`${form.type === "deposit" ? "Deposit" : "Withdrawal"} of ${money(amount)} successful!`);
+      setTxnSuccess(`${form.type === "deposit" ? "Funds added successfully" : "Funds withdrawn successfully"} — ${money(amount)}`);
       setForm((f) => ({ ...f, amount: "", description: "" }));
       // Refresh history
       setHistPage(0);
@@ -124,12 +131,12 @@ export default function Dashboard() {
       {/* ── Header ────────────────────────────────────────────────── */}
       <header style={s.header}>
         <div style={s.headerLeft}>
-          <div style={s.logoIcon}>⬡</div>
+          <Shield size={22} color="#6366f1" style={s.iconGlow} />
           <span style={s.logoText}>VAULTX</span>
         </div>
         <div style={s.headerRight}>
           <button onClick={() => setProfileOpen(true)} style={s.profileBtn}>
-             😎{user?.username}
+             {user?.username}
           </button>
           <button onClick={handleLogout} style={s.logoutBtn}>Sign Out</button>
         </div>
@@ -218,7 +225,15 @@ export default function Dashboard() {
                     onClick={() => { setForm((f) => ({ ...f, type: t })); setTxnError(""); setTxnSuccess(""); }}
                     style={{ ...s.typeBtn, ...(form.type === t ? (t === "deposit" ? s.typeBtnDepositActive : s.typeBtnWithdrawActive) : {}) }}
                   >
-                    {t === "deposit" ? "↓ Deposit" : "↑ Withdraw"}
+                    {t === "deposit" ? (
+                      <>
+                      <ArrowDownLeft size={16} /> Deposit
+                      </>
+                    ) : (
+                      <>
+                       <ArrowUpRight size={16} /> Withdraw
+                      </>
+                    )}
                   </button>
                 ))}
               </div>
@@ -258,7 +273,7 @@ export default function Dashboard() {
                       : "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                   }}
                 >
-                  {txnLoading ? "Processing…" : (form.type === "deposit" ? "Confirm Deposit" : "Confirm Withdrawal")}
+                  {txnLoading ? "Processing…" : (form.type === "deposit" ? "Add Funds" : "Withdraw Funds")}
                 </button>
               </form>
 
@@ -285,7 +300,7 @@ export default function Dashboard() {
               {histLoading ? (
                 <div style={s.histLoading}>Loading…</div>
               ) : history.length === 0 ? (
-                <div style={s.histEmpty}>No transactions yet.</div>
+                <div style={s.histEmpty}>No activity yet — your transactions will appear here.</div>
               ) : (
                 <>
                   <div style={s.histList}>
@@ -334,7 +349,10 @@ function AccountCard({ account, balance, active, onClick, onDetails }) {
         : "rgba(255,255,255,0.04)",
     }}>
       <div style={s.accCardTop}>
-        <span style={s.accType}>{account.account_type.toUpperCase()}</span>
+        <span style={s.accType}>{account.account_type === "checking" 
+          ? "Flow Account"
+          : "Vault Savings"
+        }</span>
         <span style={s.accDot}>{active ? "●" : "○"}</span>
       </div>
       <div style={s.accBalance}>{money(balance)}</div>
@@ -360,10 +378,12 @@ function TxnRow({ txn }) {
   return (
     <div style={s.txnRow}>
       <div style={{ ...s.txnIcon, background: isDeposit ? "rgba(16,185,129,0.12)" : "rgba(245,158,11,0.12)" }}>
-        {isDeposit ? "↓" : "↑"}
+        {isDeposit 
+        ? <ArrowDown size={16} color="#10b981" />
+        : <ArrowUp size={16} color="#f59e0b" />}
       </div>
       <div style={s.txnMeta}>
-        <span style={s.txnDesc}>{txn.description || (isDeposit ? "Deposit" : "Withdrawal")}</span>
+        <span style={s.txnDesc}>{txn.description || (isDeposit ? "Funds Added" : "Withdraw Funds")}</span>
         <span style={s.txnDate}>{fmtDate(txn.created_at)}</span>
       </div>
       <div style={s.txnRight}>
@@ -391,6 +411,7 @@ const s = {
   header:     { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 32px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(8,12,20,0.9)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 100 },
   headerLeft: { display: "flex", alignItems: "center", gap: 10 },
   logoIcon:   { fontSize: 24, color: "#6366f1" },
+  iconGlow:   {filter: "drop-shadow(0 0 6px rgba(99,102,241,0.6))"},
   logoText:   { fontSize: 18, fontWeight: 800, letterSpacing: "0.12em", background: "linear-gradient(135deg,#e2e8f0,#94a3b8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
   headerRight:{ display: "flex", alignItems: "center", gap: 16 },
   greeting:   { color: "#64748b", fontSize: 14 },

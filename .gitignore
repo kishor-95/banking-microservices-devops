@@ -28,3 +28,6 @@ dist-ssr
 # Trivy reports
 trivy-*.json
 trivy-*.html
+.kimchi
+.terraform.*
+.terraform

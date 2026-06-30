@@ -1,0 +1,48 @@
+# networkpolicy-backend-restrict.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: bankapp-backend-restrict
+  namespace: bankapp
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - auth-service
+          - account-service
+          - balance-service
+          - transaction-service
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow frontend (nginx) to reach backend APIs
+    - from:
+        - podSelector:
+            matchLabels:
+              app: bankapp-frontend
+      ports:
+        - protocol: TCP
+          port: 8001
+        - protocol: TCP
+          port: 8002
+        - protocol: TCP
+          port: 8003
+        - protocol: TCP
+          port: 8004
+    # Allow Prometheus (monitoring namespace) to scrape /metrics
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8001
+        - protocol: TCP
+          port: 8002
+        - protocol: TCP
+          port: 8003
+        - protocol: TCP
+          port: 8004

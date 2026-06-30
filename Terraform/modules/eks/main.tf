@@ -15,14 +15,14 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.45"
+      #      version = ">= 6.42.0"
     }
   }
 }
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 20.4"
+  version = "~> 20.37"
 
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version
@@ -91,7 +91,7 @@ module "eks" {
       # Launch template configuration
       create_launch_template = true
       launch_template_name   = "${var.cluster_name}-launch-template"
-      launch_template_version = "$Latest"
+      launch_template_version = 1
 
       # EBS configuration with encryption
       block_device_mappings = {
@@ -112,7 +112,7 @@ module "eks" {
       metadata_options = {
         http_endpoint               = "enabled"
         http_tokens                 = "required"      # IMDSv2 required
-        http_put_response_hop_limit = 2
+        http_put_response_hop_limit = 3
       }
 
       # Tags and labels
@@ -134,12 +134,16 @@ module "eks" {
   # ==========================================================================
   # EKS ADD-ONS - Core CNI, monitoring, storage
   # ==========================================================================
+  # Disable self-managed addons to avoid race conditions and adoption delays
+  bootstrap_self_managed_addons = false
+
   cluster_addons = {
     # CoreDNS - Kubernetes DNS
     coredns = {
       most_recent = true
       timeouts = {
-        create = "10m"
+        create = "30m"
+        update = "30m"
         delete = "10m"
       }
     }
@@ -148,17 +152,21 @@ module "eks" {
     kube-proxy = {
       most_recent = true
       timeouts = {
-        create = "10m"
+        create = "30m"
+        update = "30m"
         delete = "10m"
       }
     }
 
     # VPC CNI - AWS-native networking for pods
+    # Create before compute to ensure proper node initialization
     vpc-cni = {
       most_recent = true
-      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+      #service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+      before_compute = true
       timeouts = {
-        create = "10m"
+        create = "30m"
+        update = "30m"
         delete = "10m"
       }
     }
@@ -168,7 +176,8 @@ module "eks" {
       most_recent = true
       service_account_role_arn = module.ebs_csi_irsa.iam_role_arn
       timeouts = {
-        create = "10m"
+        create = "30m"
+        update = "30m"
         delete = "10m"
       }
     }

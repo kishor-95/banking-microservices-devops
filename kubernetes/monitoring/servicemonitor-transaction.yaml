@@ -1,0 +1,20 @@
+# servicemonitor-transaction.yaml
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: bankapp-transaction-service-monitor
+  namespace: bankapp
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: transaction-service
+  namespaceSelector:
+    matchNames:
+      - bankapp
+  endpoints:
+    - port: transaction-service-port
+      path: /metrics
+      interval: 30s

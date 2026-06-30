@@ -2,12 +2,13 @@
 
 frontendPipeline(
     serviceName         : 'bankapp-frontend',
-    serviceDir          : 'bankapp-frontend',
-    containerName       : 'bankapp-frontend',
-    deploymentFile      : 'kubernetes/frontend/frontend-service-deployment',
-    coverageThreshold   : 75,
+    serviceDir          : 'frontend',
+    containerName       : 'bankapp-frontend-service',
+    deploymentFile      : 'kubernetes/frontend/frontend-service-deployment.yaml',
+    coverageThreshold   : 80,
     gitCredentialsId    : 'git-creds',
     dockerCredentialsId : 'docker-creds',
     namespace           : 'kishor95',
+    serviceType         : 'node',  
     gitOpsRepo          : 'https://github.com/kishor-95/banking-microservices-devops.git'
 )
