@@ -15,10 +15,18 @@ import bcrypt
 import jwt
 import psycopg2
 import psycopg2.extras
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Request, Security
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr, field_validator
+
+# ── Metrics ───────────────────────────────────────────────────────────────────
+import time
+from metrics import (
+    REQUEST_COUNT, REQUEST_LATENCY, REQUESTS_IN_PROGRESS,
+    record_login, record_registration, record_token_operation,
+    metrics_endpoint
+)
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO)
@@ -44,7 +52,43 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)  # allow None for /auth/verify, /auth/health
+
+# ── Metrics Middleware ─────────────────────────────────────────────────────────
+
+
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    """Track request metrics"""
+    if request.url.path == "/metrics":
+        return await call_next(request)
+
+    method = request.method
+    path = request.url.path
+    REQUESTS_IN_PROGRESS.labels(method=method, endpoint=path).inc()
+
+    start_time = time.time()
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+    except Exception:
+        status_code = 500
+        raise
+    finally:
+        duration = time.time() - start_time
+        REQUEST_LATENCY.labels(method=method, endpoint=path).observe(duration)
+        REQUEST_COUNT.labels(method=method, endpoint=path, status_code=status_code).inc()
+        REQUESTS_IN_PROGRESS.labels(method=method, endpoint=path).dec()
+
+    return response
+
+
+# ── Metrics Endpoint ───────────────────────────────────────────────────────────
+@app.get("/metrics")
+async def get_metrics():
+    """Prometheus metrics endpoint"""
+    return await metrics_endpoint()
+
 
 # ── DB helpers ────────────────────────────────────────────────────────────────
 
@@ -138,13 +182,17 @@ def register(body: RegisterRequest):
         cur.close()
         conn.close()
     except psycopg2.errors.UniqueViolation:
+        record_registration('duplicate')
         raise HTTPException(
             status_code=409, detail="Username or email already exists")
     except Exception as exc:
         log.error("register error: %s", exc)
+        record_registration('failure')
         raise HTTPException(status_code=500, detail="Database error")
 
     token = create_jwt(row["id"], row["username"])
+    record_registration('success')
+    record_token_operation('create', 'success')
     log.info("New user registered: %s", row["username"])
     return TokenResponse(access_token=token, user_id=row["id"], username=row["username"])
 
@@ -166,22 +214,29 @@ def login(body: LoginRequest):
         raise HTTPException(status_code=500, detail="Database error")
 
     if not user:
+        record_login('invalid_credentials')
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not user["is_active"]:
+        record_login('account_disabled')
         raise HTTPException(status_code=403, detail="Account disabled")
     if not bcrypt.checkpw(body.password.encode(), user["password_hash"].encode()):
+        record_login('invalid_credentials')
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_jwt(user["id"], user["username"])
+    record_login('success')
+    record_token_operation('create', 'success')
     log.info("User logged in: %s", user["username"])
     return TokenResponse(access_token=token, user_id=user["id"], username=user["username"])
 
 
-@app.get("/auth/verify")
-def verify(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """
-    Called by other microservices to validate a Bearer token.
-    Returns the decoded claims so the calling service can use user_id.
-    """
+@app.get("/auth/verify", responses={403: {"description": "Not authenticated"}})
+def verify(credentials: HTTPAuthorizationCredentials = Security(security)):
+    if credentials is None:
+        raise HTTPException(status_code=403, detail="Not authenticated")
     payload = decode_jwt(credentials.credentials)
-    return {"valid": True, "user_id": payload["sub"], "username": payload["username"]}
+    return {
+        "valid": True,
+        "user_id": payload["sub"],
+        "username": payload["username"]
+    }

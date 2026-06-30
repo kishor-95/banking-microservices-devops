@@ -91,7 +91,7 @@ variable "cluster_name" {
 variable "cluster_version" {
   description = "Kubernetes version (must be a valid EKS version)"
   type        = string
-  default     = "1.29"
+  default     = "1.33"
 
   validation {
     condition     = can(regex("^1\\.[0-9]{2}$", var.cluster_version))

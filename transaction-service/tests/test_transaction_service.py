@@ -527,11 +527,11 @@ class TestDeposit:
 
     # ── 2e. Auth ──────────────────────────────────────────────────────────────
 
-    def test_no_auth_header_returns_403(self):
+    def test_no_auth_header_returns_401(self):
         app.dependency_overrides.clear()
         resp = client.post("/transactions/deposit",
                            json={"account_id": 1, "amount": 10.0})
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     def test_expired_token_returns_401(self):
         app.dependency_overrides.clear()
@@ -820,11 +820,11 @@ class TestWithdraw:
 
     # ── 3f. Auth ──────────────────────────────────────────────────────────────
 
-    def test_no_auth_header_returns_403(self):
+    def test_no_auth_header_returns_401(self):
         app.dependency_overrides.clear()
         resp = client.post("/transactions/withdraw",
                            json={"account_id": 1, "amount": 10.0})
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     def test_expired_token_returns_401(self):
         app.dependency_overrides.clear()
@@ -1093,10 +1093,10 @@ class TestTransactionHistory:
 
     # ── 4f. Auth ──────────────────────────────────────────────────────────────
 
-    def test_no_auth_header_returns_403(self):
+    def test_no_auth_header_returns_401(self):
         app.dependency_overrides.clear()
         resp = client.get("/transactions/1")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     def test_expired_token_returns_401(self):
         app.dependency_overrides.clear()
@@ -1175,14 +1175,14 @@ class TestJWTBranchCoverage:
 
     @pytest.mark.parametrize("method,endpoint,body", _PROTECTED)
     def test_missing_auth_on_all_endpoints(self, method, endpoint, body):
-        """No Authorization header → HTTPBearer returns 403 before any decode."""
+        """No Authorization header → HTTPBearer returns 401 before any decode."""
         app.dependency_overrides.clear()
         resp = (
             client.post(endpoint, json=body)
             if method == "POST"
             else client.get(endpoint)
         )
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.parametrize("bad_token", [
         "garbage.token.value",

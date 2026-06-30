@@ -36,10 +36,51 @@ services:
       timeout: 5s
       retries: 10
 
+    # ── Prometheus ───────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    networks:
+      - bank-network
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.1
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    command:
+      - '--path.rootfs=/host'
+  # ── Grafana ──────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.2
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP:     "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - bank-network
+    depends_on:
+      - prometheus
+
   # ── auth-service ─────────────────────────────────────────────────────────────
   auth-service:
-    # build: ./auth-service
-    image: kishor95/bankapp-auth-service:latest
+    build: ./auth-service
+    # image: kishor95/bankapp-auth-service:latest
     restart: unless-stopped
     environment:
       <<: *backend-env
@@ -60,8 +101,8 @@ services:
 
   # ── account-service ──────────────────────────────────────────────────────────
   account-service:
-    # build: ./account-service
-    image: kishor95/bankapp-account-service:latest
+    build: ./account-service
+    # image: kishor95/bankapp-account-service:latest
     restart: unless-stopped
     environment:
       <<: *backend-env
@@ -81,8 +122,8 @@ services:
 
   # ── balance-service ───────────────────────────────────────────────────────────
   balance-service:
-    # build: ./balance-service
-    image: kishor95/bankapp-balance-service:latest
+    build: ./balance-service
+    # image: kishor95/bankapp-balance-service:latest
     restart: unless-stopped
     environment:
       <<: *backend-env
@@ -102,8 +143,8 @@ services:
 
   # ── transaction-service ───────────────────────────────────────────────────────
   transaction-service:
-    # build: ./transaction-service
-    image: kishor95/bankapp-transaction-service:latest
+    build: ./transaction-service
+    # image: kishor95/bankapp-transaction-service:latest
     restart: unless-stopped
     environment:
       <<: *backend-env
@@ -123,8 +164,8 @@ services:
 
   # ── frontend (Nginx) ──────────────────────────────────────────────────────────
   frontend:
-    # build: ./frontend
-    image: kishor95/bankapp-frontend:latest  
+    build: ./frontend
+    # image: kishor95/bankapp-frontend:latest  
     restart: unless-stopped
     ports:
       - "80:80"      # Only port exposed to the host
@@ -144,6 +185,8 @@ services:
 
 volumes:
   pg_data:
+  prometheus_data:
+  grafana_data:
 
 networks:
   bank-network:
