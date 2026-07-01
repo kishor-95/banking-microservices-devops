@@ -36,9 +36,9 @@
 terraform {
   backend "s3" {
     # Update this with your actual bucket name from manual setup
-    bucket       = "banking-eks-cluster-dev-2026-6-3"
+    bucket       = "<YOUR_BUCKET_NAME>"  ## Change this to your S3 bucket name
     key          = "banking-eks/dev/terraform.tfstate"
-    region       = "ap-south-1"
+    region       = "<YOUR_REGION>"  ## Change this to your AWS region
     encrypt      = true
     use_lockfile = true
   }
