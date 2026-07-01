@@ -49,8 +49,6 @@ A production-grade microservices banking application with a complete DevSecOps p
 
 ![SonarQube All Services](docs/images/sonarqube-all-services.png)
 
-![SonarQube Auth Service Detail](docs/images/sonarqube-auth-service.png)
-
 ---
 
 ### Container Registry — Docker Hub
